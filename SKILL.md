@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Use when a user asks to scan a repository for dependency vulnerabilities, insecure code patterns, CVEs, secrets, or OWASP Top 10 risks.
+description: Use when a user asks to scan a repository for dependency vulnerabilities, insecure code patterns, CVEs, or OWASP Top 10 risks.
 license: MIT
 metadata:
   author: Ray Tien
@@ -46,8 +46,10 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
 3. For every `ready` project, run exactly its planned command from that project's directory.
    Never chain package managers with `||`. Capture stdout, stderr, exit code, and tool version
    separately; a non-zero exit may mean findings rather than execution failure.
-4. Mark `needs-lockfile`, `needs-export`, and missing-tool entries as `inconclusive` or `skipped`.
-   Offer installation or preparation instructions, but do not perform them without approval.
+4. Do not run planner records marked `inconclusive`; their command is null because project evidence
+   is ambiguous. Preserve the planner's reason and report the affected scope as incomplete. Mark
+   `needs-lockfile`, `needs-export`, and missing-tool entries as `inconclusive` or `skipped`. Offer
+   installation or preparation instructions, but do not perform them without approval.
 5. Unless code scanning was disabled, run:
 
    ```bash

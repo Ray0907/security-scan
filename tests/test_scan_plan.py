@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.scan_plan import buildScanPlan
 
@@ -36,6 +37,170 @@ class ScanPlanTest(unittest.TestCase):
 		self.assertEqual("pnpm", project_node["tool"])
 		self.assertEqual(["pnpm", "audit", "--json"], project_node["command"])
 
+	def testMarksPackageManagerLockfileMismatchAsInconclusive(self):
+		self.writeFile("package.json", '{"packageManager":"npm@11.0.0"}')
+		self.writeFile("pnpm-lock.yaml")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual(
+			"packageManager does not match available lockfile",
+			project_node["reason"],
+		)
+
+	def testMarksDifferentManagerLockfilesAsInconclusive(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("package-lock.json")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual(
+			"lockfiles for multiple package managers are present",
+			project_node["reason"],
+		)
+
+	def testTreatsNpmLockfilesAsSameManagerEvidence(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("package-lock.json")
+		self.writeFile("npm-shrinkwrap.json")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("ready", project_node["status"])
+		self.assertEqual("npm", project_node["tool"])
+		self.assertEqual(["npm", "audit", "--json"], project_node["command"])
+
+	def testAcceptsMatchingPackageManagerDeclaration(self):
+		self.writeFile("package.json", '{"packageManager":"yarn@4.1.0+sha512.abc"}')
+		self.writeFile("yarn.lock")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("ready", project_node["status"])
+		self.assertEqual("yarn", project_node["tool"])
+		self.assertEqual(
+			["yarn", "npm", "audit", "--json", "--all", "--recursive"],
+			project_node["command"],
+		)
+
+	def testMarksMatchingPackageManagerWithoutLockfileAsNotReady(self):
+		self.writeFile("package.json", '{"packageManager":"pnpm@10.0.0"}')
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("needs-lockfile", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+
+	def testMarksUnsupportedPackageManagerAsInconclusive(self):
+		self.writeFile("package.json", '{"packageManager":"bun@1.2.3"}')
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual(
+			"packageManager declaration is unsupported or malformed",
+			project_node["reason"],
+		)
+
+	def testMarksMalformedPackageManagerAsInconclusive(self):
+		self.writeFile("package.json", '{"packageManager":7}')
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual(
+			"packageManager declaration is unsupported or malformed",
+			project_node["reason"],
+		)
+
+	def testMarksYarnTagAsMalformedPackageManager(self):
+		self.writeFile("package.json", '{"packageManager":"yarn@berry"}')
+		self.writeFile("yarn.lock")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual(
+			"packageManager declaration is unsupported or malformed",
+			project_node["reason"],
+		)
+
+	def testMarksNpmTagAsMalformedPackageManager(self):
+		self.writeFile("package.json", '{"packageManager":"npm@latest"}')
+		self.writeFile("package-lock.json")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual(
+			"packageManager declaration is unsupported or malformed",
+			project_node["reason"],
+		)
+
+	def testMarksInvalidPackageJsonAsInconclusive(self):
+		self.writeFile("package.json", "{")
+		self.writeFile("package-lock.json")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual("package.json is invalid", project_node["reason"])
+
+	def testMarksSymlinkedPackageJsonAsInconclusive(self):
+		self.writeFile("package-lock.json")
+		with tempfile.TemporaryDirectory() as name_external:
+			path_external = Path(name_external) / "package.json"
+			path_external.write_text("{}", encoding="utf-8")
+			(self.path_root / "package.json").symlink_to(path_external)
+
+			project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual("package.json is invalid", project_node["reason"])
+
+	def testMarksNonStandardJsonConstantAsInvalid(self):
+		self.writeFile("package.json", '{"name":NaN}')
+		self.writeFile("package-lock.json")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual("package.json is invalid", project_node["reason"])
+
+	def testMarksExcessivelyNestedPackageJsonAsInvalid(self):
+		self.writeFile("package.json", '{"nested":' * 2000 + "0" + "}" * 2000)
+		self.writeFile("package-lock.json")
+
+		with patch("scripts.scan_plan.json.loads", side_effect=RecursionError):
+			project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("inconclusive", project_node["status"])
+		self.assertIsNone(project_node["tool"])
+		self.assertIsNone(project_node["command"])
+		self.assertEqual("package.json is invalid", project_node["reason"])
+
 	def testMarksNpmProjectWithoutLockfileAsNotReady(self):
 		self.writeFile("package.json", '{"name":"app"}')
 
@@ -57,17 +222,308 @@ class ScanPlanTest(unittest.TestCase):
 
 		self.assertEqual({"apps/web", "services/api"}, paths_project)
 
-	def testDoesNotDuplicateWorkspacePackagesCoveredByRootLockfile(self):
-		self.writeFile("package.json", '{"name":"workspace"}')
-		self.writeFile("pnpm-lock.yaml", "lockfileVersion: '9.0'")
+	def testKeepsNestedProjectNotDeclaredAsWorkspace(self):
+		self.writeFile("package.json", '{"name":"root"}')
+		self.writeFile("package-lock.json", "{}")
 		self.writeFile("apps/web/package.json", '{"name":"web"}')
 
-		plan_scan = buildScanPlan(self.path_root)
 		projects_node = [
-			item_project for item_project in plan_scan["projects"] if item_project["kind"] == "node"
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
 		]
 
-		self.assertEqual(["."], [item_project["path"] for item_project in projects_node])
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def testPackageJsonWorkspaceArrayCoversDeclaredMember(self):
+		self.writeFile("package.json", '{"workspaces":["apps/*"]}')
+		self.writeFile("package-lock.json", "{}")
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+		self.writeFile("examples/demo/package.json", '{"name":"demo"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "examples/demo"], [item["path"] for item in projects_node])
+
+	def testWorkspaceGlobDoesNotCoverDeeperUndeclaredProject(self):
+		self.writeFile("package.json", '{"workspaces":["*"]}')
+		self.writeFile("package-lock.json")
+		self.writeFile("app/package.json", '{"name":"app"}')
+		self.writeFile("nested/app/package.json", '{"name":"nested-app"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "nested/app"], [item["path"] for item in projects_node])
+
+	def testPackageJsonWorkspaceObjectCoversDeclaredMember(self):
+		self.writeFile(
+			"package.json",
+			'{"workspaces":{"packages":["packages/*"]}}',
+		)
+		self.writeFile("yarn.lock")
+		self.writeFile("packages/ui/package.json", '{"name":"ui"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual(["."], [item["path"] for item in projects_node])
+
+	def testPnpmWorkspaceIncludesMembersAndAppliesExclusionsLast(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile(
+			"pnpm-workspace.yaml",
+			"packages:\n  - '!apps/private'\n  - 'apps/*'\n",
+		)
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+		self.writeFile("apps/private/package.json", '{"name":"private"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps/private"], [item["path"] for item in projects_node])
+
+	def testMalformedPackageJsonWorkspacesSuppressNoChildren(self):
+		self.writeFile("package.json", '{"workspaces":["apps/*",7]}')
+		self.writeFile("package-lock.json")
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def testUnsafePackageJsonWorkspacePathSuppressesNoChildren(self):
+		self.writeFile("package.json", '{"workspaces":["apps/*","../shared/*"]}')
+		self.writeFile("package-lock.json")
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def testUnsupportedPnpmWorkspaceYamlSuppressesNoChildren(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("pnpm-workspace.yaml", "packages: [apps/*]\n")
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def assertMalformedPnpmWorkspaceSuppressesNoChildren(self, content_workspace: str) -> None:
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("pnpm-workspace.yaml", content_workspace)
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def testPnpmDoubleQuotedEscapeSuppressesNoChildren(self):
+		self.assertMalformedPnpmWorkspaceSuppressesNoChildren(
+			'packages:\n  - "apps\\/*"\n',
+		)
+
+	def testPnpmUnicodeWhitespaceSuppressesNoChildren(self):
+		self.assertMalformedPnpmWorkspaceSuppressesNoChildren(
+			"packages:\n  - apps/*\n  - invalid\u00a0\n",
+		)
+
+	def testSymlinkedPnpmWorkspaceSuppressesNoChildren(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+		with tempfile.TemporaryDirectory() as name_external:
+			path_external = Path(name_external) / "pnpm-workspace.yaml"
+			path_external.write_text("packages:\n  - apps/*\n", encoding="utf-8")
+			(self.path_root / "pnpm-workspace.yaml").symlink_to(path_external)
+
+			projects_node = [
+				item_project
+				for item_project in buildScanPlan(self.path_root)["projects"]
+				if item_project["kind"] == "node"
+			]
+
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def testPnpmForbiddenControlCharacterSuppressesNoChildren(self):
+		self.assertMalformedPnpmWorkspaceSuppressesNoChildren(
+			"packages:\n  - apps/*\n  - invalid\x00pattern\n",
+		)
+
+	def testPnpmHeaderCommentWithoutWhitespaceSuppressesNoChildren(self):
+		self.assertMalformedPnpmWorkspaceSuppressesNoChildren(
+			"packages:#comment\n  - apps/*\n",
+		)
+
+	def testPnpmDoubleQuotedCommentWithoutWhitespaceSuppressesNoChildren(self):
+		self.assertMalformedPnpmWorkspaceSuppressesNoChildren(
+			'packages:\n  - "apps/*"#comment\n',
+		)
+
+	def testPnpmSingleQuotedCommentWithoutWhitespaceSuppressesNoChildren(self):
+		self.assertMalformedPnpmWorkspaceSuppressesNoChildren(
+			"packages:\n  - 'apps/*'#comment\n",
+		)
+
+	def assertPnpmNonStringScalarSuppressesNoChildren(self, scalar_workspace: str) -> None:
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile(
+			"pnpm-workspace.yaml",
+			f"packages:\n  - apps/*\n  - {scalar_workspace}\n",
+		)
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps/web"], [item["path"] for item in projects_node])
+
+	def testPnpmHexadecimalScalarSuppressesNoChildren(self):
+		self.assertPnpmNonStringScalarSuppressesNoChildren("0x10")
+
+	def testPnpmExponentialScalarSuppressesNoChildren(self):
+		self.assertPnpmNonStringScalarSuppressesNoChildren("1e3")
+
+	def testPnpmNonFiniteScalarSuppressesNoChildren(self):
+		self.assertPnpmNonStringScalarSuppressesNoChildren(".nan")
+
+	def testPnpmTimestampScalarSuppressesNoChildren(self):
+		value_timestamp = "2026-08-30T12:34:56Z"
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("pnpm-workspace.yaml", f"packages:\n  - {value_timestamp}\n")
+		self.writeFile(f"{value_timestamp}/package.json", '{"name":"timestamp"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", value_timestamp], [item["path"] for item in projects_node])
+
+	def testPnpmMappingEntrySuppressesNoChildren(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("pnpm-workspace.yaml", "packages:\n  - apps:\n")
+		self.writeFile("apps:/package.json", '{"name":"mapping"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual([".", "apps:"], [item["path"] for item in projects_node])
+
+	def testPnpmCommentOnlyListItemSuppressesNoChildren(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("pnpm-workspace.yaml", "packages:\n  - #member\n")
+		self.writeFile("#member/package.json", '{"name":"member"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual(["#member", "."], [item["path"] for item in projects_node])
+
+	def testMisindentedPnpmWorkspaceListSuppressesNoChildren(self):
+		self.writeFile("package.json", "{}")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile(
+			"pnpm-workspace.yaml",
+			"packages:\n  - apps/*\n    - examples/*\n",
+		)
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+		self.writeFile("examples/demo/package.json", '{"name":"demo"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual(
+			[".", "apps/web", "examples/demo"],
+			[item["path"] for item in projects_node],
+		)
+
+	def testInconclusiveParentSuppressesNoWorkspaceChildren(self):
+		self.writeFile("package.json", '{"workspaces":["apps/*"]}')
+		self.writeFile("package-lock.json")
+		self.writeFile("pnpm-lock.yaml")
+		self.writeFile("apps/web/package.json", '{"name":"web"}')
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual(
+			[(".", "inconclusive"), ("apps/web", "needs-lockfile")],
+			[(item["path"], item["status"]) for item in projects_node],
+		)
+
+	def testKeepsNestedInconclusiveNodeProjectVisible(self):
+		self.writeFile("package.json", '{"name":"workspace","workspaces":["apps/*"]}')
+		self.writeFile("package-lock.json")
+		self.writeFile("apps/web/package.json", '{"packageManager":"npm@11.0.0"}')
+		self.writeFile("apps/web/pnpm-lock.yaml")
+
+		projects_node = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "node"
+		]
+
+		self.assertEqual(
+			[(".", "ready"), ("apps/web", "inconclusive")],
+			[
+				(item_project["path"], item_project["status"])
+				for item_project in projects_node
+			],
+		)
 
 	def testUsesRequirementsFileInsteadOfAmbientPythonEnvironment(self):
 		self.writeFile("requirements.txt", "flask==0.5")

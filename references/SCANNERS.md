@@ -16,8 +16,13 @@ and emits one record per ecosystem. Each record has a working directory, tool, c
 - `ready`: run the exact argument list from the recorded working directory.
 - `needs-lockfile`: do not perform a non-reproducible audit; mark the project inconclusive.
 - `needs-export`: the manifest cannot be audited reliably without user preparation.
+- `inconclusive`: ambiguous or invalid project evidence prevents safe tool selection. The tool and
+  command are null; do not run a fallback command. Preserve the reason and report incomplete
+  coverage for that project.
 
-Do not replace the planner's package-manager choice with an `npm || yarn || pnpm` fallback.
+For Node.js, conflicting package-manager lockfiles, a `packageManager`/lockfile mismatch, an
+unsupported or malformed `packageManager`, or invalid `package.json` data is inconclusive. Do not
+replace the planner's package-manager choice with an `npm || yarn || pnpm` fallback.
 
 ## Tool Matrix
 
