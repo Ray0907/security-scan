@@ -6,14 +6,7 @@
 An [Agent Skills](https://agentskills.io/specification) security workflow for dependency audits,
 Semgrep code-pattern scanning, OWASP Top 10:2025 mapping, and reviewable findings.
 
-## What Changed in 1.1
-
-- Deterministic monorepo and package-manager detection through `scripts/scan_plan.py`.
-- Correct separation of scanner findings from tool failures and skipped coverage.
-- Consistent OWASP Top 10:2025 normalization, including legacy Semgrep labels.
-- Mandatory secret redaction and reproducible report metadata.
-- Structured false-positive review instead of conversation-only memory.
-- Cross-client instructions without Claude-specific `Task` or settings paths.
+See the [changelog](CHANGELOG.md) for release history.
 
 ## Safety Model
 
@@ -23,8 +16,13 @@ or failed scanners are reported as incomplete coverage, never as a clean result.
 
 ## Installation
 
-Clone or copy this directory into the skills location documented by your Agent Skills-compatible
-client. The Agent Skills standard defines the package format, but each client chooses its install
+For Claude Code:
+
+```bash
+git clone https://github.com/Ray0907/security-scan.git ~/.claude/skills/security-scan
+```
+
+Other clients use their own skills directory. Consult the client's documentation for its install
 location and invocation UI.
 
 Code scanning requires Python 3.10 or newer and Semgrep. Officially recommended Semgrep installs:
@@ -54,6 +52,29 @@ Scan this repository for security issues.
 
 `--deps-only` and `--code-only` are mutually exclusive. Persistent reminders are client-specific;
 the skill will not claim `--auto-remind` is active until a supported hook or automation is chosen.
+
+## Example
+
+Running the planner on this repository produces:
+
+```json
+{
+  "excluded": [],
+  "projects": [],
+  "root": "/private/tmp/security-scan",
+  "schema_version": 1
+}
+```
+
+A completed report records every scanner state explicitly:
+
+| Scanner | Status | Example detail |
+| --- | --- | --- |
+| npm audit | `clean` | No advisories found |
+| pip-audit | `findings` | 2 advisories found |
+| Semgrep | `failed` | Ruleset download timed out |
+| cargo-audit | `skipped` | Tool unavailable |
+| Trivy | `inconclusive` | No supported lockfile |
 
 ## Supported Dependency Evidence
 
@@ -107,12 +128,15 @@ semgrep scan --config p/owasp-top-ten --validate --metrics=off
 ```text
 security-scan/
 ├── .github/workflows/validate.yml
+├── docs/                       # Design documents
 ├── scripts/scan_plan.py
 ├── tests/test_scan_plan.py
 ├── references/
 │   ├── OWASP.md
 │   ├── REPORTING.md
 │   └── SCANNERS.md
+├── CHANGELOG.md
+├── SECURITY.md
 ├── SKILL.md
 ├── README.md
 └── LICENSE
