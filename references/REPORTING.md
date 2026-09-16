@@ -50,7 +50,8 @@ or sensitive personal data.
 - Replace the value with `[REDACTED]`; retain only the variable name and location.
 - Do not preserve prefixes, suffixes, or "last four" characters of a secret.
 - Build fingerprints from stable metadata such as rule ID, path, and line—not the secret value.
-- Redact stdout and stderr before saving raw scanner evidence.
+- Redact stdout and stderr before saving raw scanner evidence; `scripts/run_plan.py` uses the
+  shared `scripts/redaction.py` patterns and records a redaction count.
 - If reliable redaction is uncertain, omit the snippet and explain why.
 
 ## Markdown Report

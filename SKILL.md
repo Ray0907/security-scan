@@ -46,9 +46,13 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
    ```
 
 3. Review schema v2 `fallback`, `note`, and `evidence` fields, including root secrets and CI
-   records. For every `ready` project, run exactly its planned command from its project directory.
-   Never chain package managers with `||`. Capture stdout, stderr, exit code, and tool version
-   separately; a non-zero exit may mean findings rather than execution failure.
+   records. Run ready records into a new evidence directory:
+
+   ```bash
+   python3 <skill-root>/scripts/run_plan.py plan.json --out scan-evidence
+   ```
+
+   Never chain package managers with `||`; a non-zero exit may mean findings, not tool failure.
 4. Do not run planner records marked `inconclusive`; their command is null because project evidence
    is ambiguous. Preserve the planner's reason and report the affected scope as incomplete. Mark
    `needs-lockfile`, `needs-export`, and missing-tool entries as `inconclusive` or `skipped`. Offer

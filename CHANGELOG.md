@@ -11,6 +11,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Bun planning, OSV-Scanner lockfile fallbacks, IaC detection, filesystem secret scanning, and
   offline GitHub Actions audits in planner schema v2.
+- A read-only plan runner with execution metadata, timeout and scope controls, and evidence
+  redaction before persistence.
 
 ## [1.2.0] - 2026-09-16
 

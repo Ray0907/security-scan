@@ -136,7 +136,7 @@ during a scan.
 
 1. `scripts/scan_plan.py` recursively inventories supported projects and emits a JSON execution
    plan without running a scanner.
-2. Each planned dependency command runs independently from its project directory.
+2. `scripts/run_plan.py` executes ready records without a shell and stores redacted evidence.
 3. Semgrep runs with `p/owasp-top-ten` and metrics disabled for code-pattern coverage.
 4. Findings retain native advisory IDs and are normalized to OWASP 2025 only when supported.
 5. Reports list every scanner as `clean`, `findings`, `failed`, `skipped`, or `inconclusive`.

@@ -72,6 +72,31 @@ Important limitations:
 - `bundler-audit` depends on a local advisory database. Record its freshness; ask before updating
   it, and mark stale or missing data as inconclusive.
 
+## Evidence Runner
+
+Execute a saved plan without a shell:
+
+```bash
+python3 scripts/run_plan.py plan.json --out scan-evidence
+```
+
+The runner writes `run.json` schema v1 with the plan root, timestamps, Git commit/branch/dirty
+state, and one execution record per selected planner record. Each record includes command, working
+directory, tool version, exit code, duration, execution state, reason, and redaction count. Raw
+redacted evidence is stored as:
+
+```text
+scan-evidence/
+├── run.json
+└── NN-kind-path/
+    ├── meta.json
+    ├── stderr.txt
+    └── stdout.txt
+```
+
+Execution states are `ran`, `skipped`, and `failed`; finding classification remains a separate
+step. The runner refuses a non-empty evidence directory unless `--force` is explicit.
+
 ## Classify Results
 
 Capture stdout, stderr, exit code, command, working directory, duration, and tool version. Parse
