@@ -1,10 +1,14 @@
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 
 from scripts.normalize_findings import (
+	getCoverage,
 	normalizeEvidence,
 	parseArguments,
 	parseGovulncheck,
@@ -189,6 +193,114 @@ class NormalizeFindingsTest(unittest.TestCase):
 		self.assertNotIn("change", report_first["findings"][0])
 		self.assertEqual(report_first["findings"][0]["fingerprint"], report_clean["fixed"][0]["fingerprint"])
 
+	def testMergesVerdictsAndReportsUnmatchedFingerprints(self):
+		path_evidence = self.makeEvidence("semgrep")
+		finding_first = normalizeEvidence(path_evidence)["findings"][0]
+		verdict_data = {
+			finding_first["fingerprint"]: {
+				"verdict": "confirmed",
+				"verdict_evidence": {
+					"reason": "Untrusted input reaches eval without validation.",
+					"trace": "code/app.js:3 -> eval",
+					"unresolved_fact": None,
+					"reviewed_at": "2026-09-16T00:00:00+00:00",
+					"reviewer": "security-reviewer",
+				},
+			},
+			"missing-fingerprint": {
+				"verdict": "rejected",
+				"verdict_evidence": {
+					"reason": "Not present.", "trace": None, "unresolved_fact": None,
+					"reviewed_at": "2026-09-16T00:00:00+00:00", "reviewer": "reviewer",
+				},
+			},
+		}
+		path_verdicts = self.path_root / "verdicts.json"
+		path_verdicts.write_text(json.dumps(verdict_data), encoding="utf-8")
+		output_error = io.StringIO()
+
+		with redirect_stderr(output_error):
+			report_scan = normalizeEvidence(path_evidence, path_verdicts=path_verdicts)
+
+		finding_merged = next(
+			finding for finding in report_scan["findings"]
+			if finding["fingerprint"] == finding_first["fingerprint"]
+		)
+		self.assertEqual("confirmed", finding_merged["verdict"])
+		self.assertEqual("security-reviewer", finding_merged["verdict_evidence"]["reviewer"])
+		self.assertEqual(["missing-fingerprint"], report_scan["verdicts_unmatched"])
+		self.assertIn("missing-fingerprint", output_error.getvalue())
+
+	def testCarriesForwardVerdictUnlessFindingContextChanged(self):
+		path_evidence = self.makeEvidence("pnpm")
+		report_baseline = normalizeEvidence(path_evidence)
+		finding_baseline = report_baseline["findings"][0]
+		finding_baseline["verdict"] = "confirmed"
+		finding_baseline["verdict_evidence"] = {
+			"reason": "Locked vulnerable version.", "trace": "lodash -> pnpm-lock.yaml",
+			"unresolved_fact": None, "reviewed_at": "2026-09-16T00:00:00+00:00",
+			"reviewer": "security-reviewer",
+		}
+		path_baseline = self.path_root / "baseline.json"
+		path_baseline.write_text(json.dumps(report_baseline), encoding="utf-8")
+
+		report_same = normalizeEvidence(path_evidence, path_baseline=path_baseline)
+		carried = next(
+			finding for finding in report_same["findings"]
+			if finding["fingerprint"] == finding_baseline["fingerprint"]
+		)
+		self.assertEqual("confirmed", carried["verdict"])
+		self.assertTrue(carried["verdict_carried_forward"])
+
+		finding_baseline["installed_version"] = "different"
+		path_baseline.write_text(json.dumps(report_baseline), encoding="utf-8")
+		report_changed = normalizeEvidence(path_evidence, path_baseline=path_baseline)
+		invalidated = next(
+			finding for finding in report_changed["findings"]
+			if finding["fingerprint"] == finding_baseline["fingerprint"]
+		)
+		self.assertNotIn("verdict", invalidated)
+		self.assertNotIn("verdict_carried_forward", invalidated)
+
+	def testMarkdownGroupsVerdictsAndSarifMapsKinds(self):
+		report_scan = normalizeEvidence(self.makeEvidence("semgrep"))
+		finding_template = report_scan["findings"][0]
+		findings = []
+		for index_finding, verdict in enumerate(("confirmed", "needs_validation", None, "rejected")):
+			finding = deepcopy(finding_template)
+			finding["id"] = f"finding-{index_finding}"
+			finding["rule_id"] = finding["id"]
+			finding["fingerprint"] = f"fingerprint-{index_finding}"
+			finding["change"] = "new" if index_finding == 0 else "unchanged"
+			if verdict:
+				finding["verdict"] = verdict
+			findings.append(finding)
+		report_scan["findings"] = findings
+
+		content_markdown = toMarkdown(report_scan)
+		data_sarif = toSarif(report_scan)
+		results_sarif = data_sarif["runs"][0]["results"]
+		kinds_sarif = {result["ruleId"]: result["kind"] for result in results_sarif}
+
+		for heading_verdict in ("Confirmed", "Needs validation", "Unreviewed", "Rejected"):
+			self.assertIn(f"## {heading_verdict}", content_markdown)
+		self.assertLess(content_markdown.index("## Unreviewed"), content_markdown.index("## OWASP"))
+		self.assertGreater(content_markdown.index("## Rejected"), content_markdown.index("## OWASP"))
+		self.assertEqual("fail", kinds_sarif["finding-0"])
+		self.assertEqual("review", kinds_sarif["finding-1"])
+		self.assertEqual("review", kinds_sarif["finding-2"])
+		self.assertEqual("notApplicable", kinds_sarif["finding-3"])
+		self.assertEqual("new", results_sarif[0]["baselineState"])
+		self.assertEqual("unchanged", results_sarif[1]["baselineState"])
+
+	def testRejectedOnlyCoverageRevertsToAutomatedCovered(self):
+		scanners = [{"tool": "semgrep", "kind": "code", "state": "findings"}]
+		findings = [{"owasp_2025": ["A05"], "verdict": "rejected"}]
+
+		self.assertEqual("automated-covered", getCoverage(scanners, findings)["A05"])
+		findings.append({"owasp_2025": ["A05"]})
+		self.assertEqual("findings", getCoverage(scanners, findings)["A05"])
+
 	def testSarifContainsRequiredKeys(self):
 		report_scan = normalizeEvidence(self.makeEvidence("semgrep"))
 		data_sarif = toSarif(report_scan)
@@ -223,7 +335,7 @@ class NormalizeFindingsTest(unittest.TestCase):
 			[
 				"normalize_findings.py", "evidence", "--baseline", "old.json",
 				"--format", "sarif", "--severity", "critical,high", "--owasp", "A03",
-				"--out", "result.sarif",
+				"--verdicts", "verdicts.json", "--out", "result.sarif",
 			],
 		):
 			args_normalize = parseArguments()
@@ -231,6 +343,7 @@ class NormalizeFindingsTest(unittest.TestCase):
 		self.assertEqual("sarif", args_normalize.format)
 		self.assertEqual("critical,high", args_normalize.severity)
 		self.assertEqual("A03", args_normalize.owasp)
+		self.assertEqual(Path("verdicts.json"), args_normalize.verdicts)
 
 
 if __name__ == "__main__":

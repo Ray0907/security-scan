@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -518,16 +519,27 @@ def getCoverage(items_scanner: list[dict], items_finding: list[dict]) -> dict:
 		coverage["A03"] = "automated-covered"
 	if "gitleaks" in tools_success:
 		coverage["A04"] = "automated-covered"
-	for finding in items_finding:
-		for category in finding.get("owasp_2025", []):
-			if category in coverage:
-				coverage[category] = "findings"
+	categories_finding = {
+		category
+		for finding in items_finding
+		for category in finding.get("owasp_2025", [])
+		if category in coverage
+	}
+	categories_active = {
+		category
+		for finding in items_finding if finding.get("verdict") != "rejected"
+		for category in finding.get("owasp_2025", [])
+		if category in coverage
+	}
+	for category in categories_finding:
+		coverage[category] = "findings" if category in categories_active else "automated-covered"
 	return coverage
 
 
 def normalizeEvidence(
 	path_evidence: Path,
 	path_baseline: Path | None = None,
+	path_verdicts: Path | None = None,
 	severities: set[str] | None = None,
 	categories_owasp: set[str] | None = None,
 ) -> dict:
@@ -568,13 +580,36 @@ def normalizeEvidence(
 	items_baseline = []
 	if path_baseline:
 		items_baseline = json.loads(path_baseline.read_text(encoding="utf-8")).get("findings", [])
-	fingerprints_baseline = {item["fingerprint"] for item in items_baseline}
+	baseline_by_fingerprint = {item["fingerprint"]: item for item in items_baseline}
+	fingerprints_baseline = set(baseline_by_fingerprint)
 	fingerprints_current = {item["fingerprint"] for item in items_finding}
 	if path_baseline:
 		for finding in items_finding:
 			finding["change"] = (
 				"unchanged" if finding["fingerprint"] in fingerprints_baseline else "new"
 			)
+			baseline = baseline_by_fingerprint.get(finding["fingerprint"])
+			if baseline and baseline.get("verdict") and all(
+				finding.get(field) == baseline.get(field)
+				for field in ("location", "line", "installed_version")
+			):
+				finding["verdict"] = baseline["verdict"]
+				finding["verdict_evidence"] = baseline.get("verdict_evidence")
+				finding["verdict_carried_forward"] = True
+
+	verdicts_unmatched = []
+	if path_verdicts:
+		verdicts = json.loads(path_verdicts.read_text(encoding="utf-8"))
+		findings_by_fingerprint = {item["fingerprint"]: item for item in items_finding}
+		for fingerprint, verdict_data in verdicts.items():
+			finding = findings_by_fingerprint.get(fingerprint)
+			if finding is None:
+				verdicts_unmatched.append(fingerprint)
+				print(f"unmatched verdict fingerprint: {fingerprint}", file=sys.stderr)
+				continue
+			finding["verdict"] = verdict_data["verdict"]
+			finding["verdict_evidence"] = verdict_data["verdict_evidence"]
+			finding.pop("verdict_carried_forward", None)
 	items_fixed = [
 		{"fingerprint": item["fingerprint"], "id": item.get("id"), "package": item.get("package")}
 		for item in items_baseline if item["fingerprint"] not in fingerprints_current
@@ -605,6 +640,7 @@ def normalizeEvidence(
 		"findings": items_finding,
 		"fixed": items_fixed,
 		"owasp_coverage": getCoverage(items_scanner, items_finding),
+		"verdicts_unmatched": sorted(verdicts_unmatched),
 	}
 	return redactValue(data_output)
 
@@ -626,15 +662,19 @@ def toSarif(data_report: dict) -> dict:
 			region = {}
 			if finding.get("line"):
 				region["startLine"] = finding["line"]
-			results.append(
-				{
-					"ruleId": rule_id,
-					"level": {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note", "unknown": "note"}[finding["normalized_severity"]],
-					"message": {"text": finding["summary"]},
-					"locations": [{"physicalLocation": {"artifactLocation": {"uri": finding["location"]}, "region": region}}],
-					"partialFingerprints": {"primaryLocationLineHash": finding["fingerprint"]},
-				}
-			)
+			result_sarif = {
+				"ruleId": rule_id,
+				"kind": {
+					"confirmed": "fail", "needs_validation": "review", "rejected": "notApplicable",
+				}.get(finding.get("verdict"), "review"),
+				"level": {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note", "unknown": "note"}[finding["normalized_severity"]],
+				"message": {"text": finding["summary"]},
+				"locations": [{"physicalLocation": {"artifactLocation": {"uri": finding["location"]}, "region": region}}],
+				"partialFingerprints": {"primaryLocationLineHash": finding["fingerprint"]},
+			}
+			if finding.get("change") in ("new", "unchanged"):
+				result_sarif["baselineState"] = finding["change"]
+			results.append(result_sarif)
 		runs_sarif.append(
 			{
 				"tool": {"driver": {"name": scanner["tool"], "version": scanner.get("tool_version"), "rules": rules}},
@@ -657,14 +697,30 @@ def toMarkdown(data_report: dict) -> str:
 	]
 	for scanner in data_report["scanners"]:
 		lines.append(f"| {scanner['tool']} | {scanner['path']} | {scanner['state']} | {scanner['finding_count']} |")
-	lines.extend(["", "## Findings", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
-	for finding in data_report["findings"]:
-		fixed = ", ".join(finding.get("fixed_versions", [])) or "—"
-		place = finding.get("package") or finding.get("location") or "."
-		lines.append(f"| {finding['normalized_severity']} | {finding['id']} | {place} | {finding['summary']} | {fixed} |")
+	lines.extend(["", "## Findings"])
+	groups_verdict = (
+		("Confirmed", "confirmed"),
+		("Needs validation", "needs_validation"),
+		("Unreviewed", None),
+	)
+	for heading_verdict, verdict in groups_verdict:
+		lines.extend(["", f"## {heading_verdict}", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
+		for finding in data_report["findings"]:
+			if finding.get("verdict") != verdict:
+				continue
+			fixed = ", ".join(finding.get("fixed_versions", [])) or "—"
+			place = finding.get("package") or finding.get("location") or "."
+			lines.append(f"| {finding['normalized_severity']} | {finding['id']} | {place} | {finding['summary']} | {fixed} |")
 	lines.extend(["", "## OWASP 2025 Coverage", "", "| Category | State |", "| --- | --- |"])
 	for category, state in data_report["owasp_coverage"].items():
 		lines.append(f"| {category} | {state} |")
+	lines.extend(["", "## Rejected", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
+	for finding in data_report["findings"]:
+		if finding.get("verdict") != "rejected":
+			continue
+		fixed = ", ".join(finding.get("fixed_versions", [])) or "—"
+		place = finding.get("package") or finding.get("location") or "."
+		lines.append(f"| {finding['normalized_severity']} | {finding['id']} | {place} | {finding['summary']} | {fixed} |")
 	lines.extend(["", "## Limitations", "", "Failed, skipped, and inconclusive scanners remain incomplete coverage."])
 	if any(finding.get("enrichment") for finding in data_report["findings"]):
 		lines.extend(["", "> This product uses data from the NVD API but is not endorsed or certified by the NVD."])
@@ -675,6 +731,7 @@ def parseArguments() -> argparse.Namespace:
 	parser_output = argparse.ArgumentParser(description="Normalize scanner evidence.")
 	parser_output.add_argument("evidence", type=Path)
 	parser_output.add_argument("--baseline", type=Path)
+	parser_output.add_argument("--verdicts", type=Path)
 	parser_output.add_argument("--format", choices=("json", "sarif", "markdown"), default="json")
 	parser_output.add_argument("--severity")
 	parser_output.add_argument("--owasp")
@@ -687,6 +744,7 @@ def runMain() -> None:
 	data_report = normalizeEvidence(
 		args_output.evidence,
 		path_baseline=args_output.baseline,
+		path_verdicts=args_output.verdicts,
 		severities=set(args_output.severity.lower().split(",")) if args_output.severity else None,
 		categories_owasp=set(args_output.owasp.upper().split(",")) if args_output.owasp else None,
 	)

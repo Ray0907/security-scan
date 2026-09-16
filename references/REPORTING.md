@@ -63,6 +63,44 @@ fixed baseline entries, and A01-A10 coverage:
 Baselines match fingerprints: present fingerprints are `unchanged`, new fingerprints are `new`,
 and missing prior fingerprints are listed as `fixed`.
 
+## Finding Verdicts
+
+Verdicts are optional review decisions written after normalization, not scanner claims. Store them in
+`verdicts.json` as a JSON object keyed by finding fingerprint, then merge them with
+`normalize_findings.py --verdicts verdicts.json`.
+
+Each reviewed finding has `verdict` set to `confirmed`, `needs_validation`, or `rejected`, plus:
+
+```json
+{
+  "verdict_evidence": {
+    "reason": "Specific technical conclusion",
+    "trace": "entry.py:10 -> sink.py:42",
+    "unresolved_fact": null,
+    "reviewed_at": "2026-09-16T00:00:00+00:00",
+    "reviewer": "security-reviewer"
+  }
+}
+```
+
+Apply these rules:
+
+- `confirmed`: an input surface can reach the vulnerable condition. `trace` names the path as
+  file:line to file:line, or package to lockfile entry, and `reason` identifies the missing control.
+- `needs_validation`: `unresolved_fact` states exactly what could not be determined, such as
+  whether `sanitize()` at `api/util.py:40` strips backticks. Keep the scanner's normalized severity;
+  uncertainty is not a severity downgrade.
+- `rejected`: `reason` explains why the condition is unreachable or controlled and cites technical
+  evidence meeting the false-positive requirements below. A user assertion alone is not evidence.
+- A dependency finding defaults to `confirmed` when its installed or locked version matches the
+  vulnerable range. Lower it to `rejected` only with a documented reachability argument.
+- Findings without a verdict are unreviewed. Report them under a separate Unreviewed heading, and
+  never describe unreviewed Semgrep results as confirmed vulnerabilities.
+
+A baseline verdict is carried forward only when fingerprint, location, line, and installed version
+still match. Explicit verdict input replaces a carried verdict. Unknown verdict fingerprints are
+reported on stderr and in `verdicts_unmatched`.
+
 ## SARIF Mapping
 
 | Normalized field | SARIF 2.1.0 field |
