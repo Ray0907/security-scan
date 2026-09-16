@@ -522,10 +522,11 @@ def normalizeEvidence(
 		items_baseline = json.loads(path_baseline.read_text(encoding="utf-8")).get("findings", [])
 	fingerprints_baseline = {item["fingerprint"] for item in items_baseline}
 	fingerprints_current = {item["fingerprint"] for item in items_finding}
-	for finding in items_finding:
-		finding["change"] = (
-			"unchanged" if finding["fingerprint"] in fingerprints_baseline else "new"
-		)
+	if path_baseline:
+		for finding in items_finding:
+			finding["change"] = (
+				"unchanged" if finding["fingerprint"] in fingerprints_baseline else "new"
+			)
 	items_fixed = [
 		{"fingerprint": item["fingerprint"], "id": item.get("id"), "package": item.get("package")}
 		for item in items_baseline if item["fingerprint"] not in fingerprints_current

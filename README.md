@@ -2,9 +2,13 @@
 
 [![Agent Skills compatible](https://img.shields.io/badge/Agent%20Skills-compatible-blue)](https://agentskills.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Ray0907/security-scan)](https://github.com/Ray0907/security-scan/releases)
+[![Validate](https://github.com/Ray0907/security-scan/actions/workflows/validate.yml/badge.svg)](https://github.com/Ray0907/security-scan/actions/workflows/validate.yml)
 
-An [Agent Skills](https://agentskills.io/specification) security workflow for dependency audits,
-Semgrep code-pattern scanning, OWASP Top 10:2025 mapping, and reviewable findings.
+An [Agent Skills](https://agentskills.io/specification) security workflow for AI coding agents.
+It plans and runs read-only dependency audits, Semgrep code-pattern scans, infrastructure
+misconfiguration checks, secret detection, and GitHub Actions audits, then normalizes everything
+into one OWASP Top 10:2025 mapped report with fingerprints, baseline diffs, and SARIF output.
 
 See the [changelog](CHANGELOG.md) for release history.
 
@@ -69,51 +73,80 @@ for GitHub code scanning.
 
 ## Example
 
-Running the planner on this repository:
+A monorepo with a Bun app, an npm app, an `infra/` directory holding a Dockerfile and a Kubernetes
+manifest, and a GitHub Actions workflow:
 
 ```bash
-python3 scripts/scan_plan.py . --pretty
+python3 scripts/scan_plan.py /work/app --exclude infra/legacy --pretty
 ```
 
 ```json
 {
-  "excluded": [],
+  "excluded": ["infra/legacy"],
   "projects": [
     {
-      "command": [
-        "zizmor",
-        "--format",
-        "json",
-        "--offline",
-        ".github/workflows"
-      ],
-      "coverage": "offline-audits-only",
       "kind": "ci",
       "path": ".",
       "status": "ready",
-      "tool": "zizmor"
+      "tool": "zizmor",
+      "coverage": "offline-audits-only",
+      "command": ["zizmor", "--format", "json", "--offline", ".github/workflows"]
     },
     {
-      "command": [
-        "gitleaks",
-        "dir",
-        ".",
-        "--no-banner",
-        "--redact",
-        "--report-format",
-        "json",
-        "--report-path",
-        "/dev/stdout"
-      ],
-      "coverage": "filesystem-only",
       "kind": "secrets",
       "path": ".",
       "status": "ready",
-      "tool": "gitleaks"
+      "tool": "gitleaks",
+      "coverage": "filesystem-only",
+      "command": ["gitleaks", "dir", ".", "--no-banner", "--redact", "--report-format", "json", "--report-path", "/dev/stdout"]
+    },
+    {
+      "kind": "node",
+      "path": "bunapp",
+      "status": "ready",
+      "tool": "bun",
+      "command": ["bun", "audit", "--json"]
+    },
+    {
+      "kind": "container",
+      "path": "infra",
+      "status": "ready",
+      "tool": "trivy",
+      "coverage": "misconfiguration-only",
+      "evidence": ["pod.yaml"],
+      "command": ["trivy", "fs", "--format", "json", "--scanners", "misconfig", "."]
+    },
+    {
+      "kind": "node",
+      "path": "npmapp",
+      "status": "ready",
+      "tool": "npm",
+      "command": ["npm", "audit", "--json"]
     }
   ],
-  "root": "/private/tmp/security-scan",
+  "root": "/work/app",
   "schema_version": 2
+}
+```
+
+After `run_plan.py` and `normalize_findings.py`, each finding keeps its native identity and adds
+normalized fields:
+
+```json
+{
+  "id": "GHSA-xvch-5gv4-984h",
+  "aliases": ["1097678"],
+  "source": "bun",
+  "type": "dependency",
+  "package": "minimist",
+  "fixed_versions": [],
+  "native_severity": "critical",
+  "normalized_severity": "critical",
+  "owasp_2025": ["A03"],
+  "cwe": ["CWE-1321"],
+  "location": "bun.lock",
+  "summary": "Prototype Pollution in minimist",
+  "fingerprint": "26011568e34bedbe"
 }
 ```
 
@@ -127,9 +160,9 @@ A completed report records every scanner state explicitly:
 | cargo-audit | `skipped` | Tool unavailable |
 | Trivy | `inconclusive` | No supported lockfile |
 
-## Supported Dependency Evidence
+## Supported Scanners
 
-| Ecosystem | Primary evidence | Tool |
+| Target | Evidence | Tool |
 | --- | --- | --- |
 | Node.js | pnpm, Yarn, npm, or Bun lockfile | Matching package manager audit |
 | Python | Requirements or `pylock.*.toml` | `pip-audit` |
@@ -210,8 +243,9 @@ security-scan/
 
 ## Contributing
 
-Contributions are welcome. Include a regression test for planner behavior and run all validation
-commands before opening a pull request.
+Contributions are welcome. Include a regression test for planner or runner behavior, and add a
+minimal fixture under `tests/fixtures/<tool>/` for any new or changed scanner parser. Run all
+validation commands before opening a pull request.
 
 ## License
 

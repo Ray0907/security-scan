@@ -118,6 +118,7 @@ class NormalizeFindingsTest(unittest.TestCase):
 		)
 
 		self.assertTrue(all(item["change"] == "unchanged" for item in report_same["findings"]))
+		self.assertNotIn("change", report_first["findings"][0])
 		self.assertEqual(report_first["findings"][0]["fingerprint"], report_clean["fixed"][0]["fingerprint"])
 
 	def testSarifContainsRequiredKeys(self):
