@@ -562,7 +562,10 @@ class ScanPlanTest(unittest.TestCase):
 		project_python = self.getProject(plan_scan, "python")
 
 		self.assertEqual(
-			["pip-audit", "--format", "json", "-r", "requirements.txt"],
+			[
+				"pip-audit", "--format", "json", "--no-deps", "--disable-pip",
+				"-r", "requirements.txt",
+			],
 			project_python["command"],
 		)
 
@@ -691,6 +694,7 @@ class ScanPlanTest(unittest.TestCase):
 		self.assertEqual(1, len(projects_secret))
 		self.assertEqual(".", projects_secret[0]["path"])
 		self.assertEqual("filesystem-only", projects_secret[0]["coverage"])
+		self.assertEqual("-", projects_secret[0]["command"][-1])
 		self.assertIn("does not honor planner exclusions", projects_secret[0]["note"])
 
 	def testPlansOfflineCiWorkflowAudit(self):

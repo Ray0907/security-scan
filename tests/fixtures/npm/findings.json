@@ -1,35 +1,74 @@
 {
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
   "auditReportVersion": 2,
+  "metadata": {
+    "dependencies": {
+      "dev": 0,
+      "optional": 0,
+      "peer": 0,
+      "peerOptional": 0,
+      "prod": 2,
+      "total": 1
+    },
+    "vulnerabilities": {
+      "critical": 0,
+      "high": 1,
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "total": 1
+    }
+  },
   "vulnerabilities": {
     "lodash": {
-      "name": "lodash",
-      "severity": "high",
-      "isDirect": true,
-      "via": [
-        {
-          "source": 1106913,
-          "name": "lodash",
-          "dependency": "lodash",
-          "title": "Command Injection in lodash",
-          "url": "https://github.com/advisories/GHSA-35jh-r3h4-6jhm",
-          "severity": "high",
-          "cwe": [
-            "CWE-77"
-          ],
-          "range": "<4.17.21"
-        }
-      ],
       "effects": [],
-      "range": "<4.17.21",
+      "fixAvailable": {
+        "isSemVerMajor": false,
+        "name": "lodash",
+        "version": "4.18.1"
+      },
+      "isDirect": true,
+      "name": "lodash",
       "nodes": [
         "node_modules/lodash"
       ],
-      "fixAvailable": {
-        "name": "lodash",
-        "version": "4.17.21",
-        "isSemVerMajor": false
-      }
+      "range": "<=4.17.23",
+      "severity": "high",
+      "via": [
+        {
+          "cvss": {
+            "score": 7.2,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H"
+          },
+          "cwe": [
+            "CWE-77",
+            "CWE-94"
+          ],
+          "dependency": "lodash",
+          "name": "lodash",
+          "range": "<4.17.21",
+          "severity": "high",
+          "source": 1106913,
+          "title": "Command Injection in lodash",
+          "url": "https://github.com/advisories/GHSA-35jh-r3h4-6jhm"
+        },
+        {
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-1333"
+          ],
+          "dependency": "lodash",
+          "name": "lodash",
+          "range": ">=4.0.0 <4.17.21",
+          "severity": "moderate",
+          "source": 1108258,
+          "title": "Regular Expression Denial of Service (ReDoS) in lodash",
+          "url": "https://github.com/advisories/GHSA-29mw-wpgm-hmr9"
+        }
+      ]
     }
   }
 }

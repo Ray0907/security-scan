@@ -401,7 +401,7 @@ def getPythonProject(path_project: Path, names_file: set[str], path_root: Path) 
 		}
 		files_ignored = files_pylock[1:] + files_requirement + files_fallback
 	elif files_requirement:
-		command_scan = ["pip-audit", "--format", "json"]
+		command_scan = ["pip-audit", "--format", "json", "--no-deps", "--disable-pip"]
 		for name_file in files_requirement:
 			command_scan.extend(["-r", name_file])
 		project_python = {**data_base, "tool": "pip-audit", "command": command_scan}
@@ -685,7 +685,7 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 		"coverage": "filesystem-only",
 		"command": [
 			"gitleaks", "dir", ".", "--no-banner", "--redact", "--report-format", "json",
-			"--report-path", "/dev/stdout",
+			"--report-path", "-",
 		],
 	}
 	if names_excluded:

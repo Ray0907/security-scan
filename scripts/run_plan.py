@@ -95,6 +95,7 @@ def runPlan(
 	patterns_redact: list[str] | None = None,
 	quiet: bool = False,
 	force: bool = False,
+	semgrep: bool = False,
 ) -> int:
 	plan_scan = loadPlan(path_plan)
 	path_root = Path(plan_scan["root"]).resolve()
@@ -105,8 +106,22 @@ def runPlan(
 	failed_run = False
 	set_only = set(kinds_only or ())
 	set_skip = set(kinds_skip or ())
+	items_plan = list(plan_scan["projects"])
+	if semgrep:
+		items_plan.append(
+			{
+				"kind": "code",
+				"path": ".",
+				"status": "ready",
+				"tool": "semgrep",
+				"command": [
+					"semgrep", "scan", "--config", "p/owasp-top-ten", "--json",
+					"--metrics=off", ".",
+				],
+			}
+		)
 
-	for index_plan, item_plan in enumerate(plan_scan["projects"], start=1):
+	for index_plan, item_plan in enumerate(items_plan, start=1):
 		if set_only and item_plan["kind"] not in set_only or item_plan["kind"] in set_skip:
 			continue
 		path_cwd = path_root if item_plan["path"] == "." else path_root / item_plan["path"]
@@ -214,6 +229,7 @@ def parseArguments() -> argparse.Namespace:
 	parser_run.add_argument("--redact-pattern", action="append", default=[])
 	parser_run.add_argument("--quiet", action="store_true")
 	parser_run.add_argument("--force", action="store_true")
+	parser_run.add_argument("--semgrep", action="store_true")
 	return parser_run.parse_args()
 
 
@@ -229,6 +245,7 @@ def runMain() -> None:
 			patterns_redact=args_run.redact_pattern,
 			quiet=args_run.quiet,
 			force=args_run.force,
+			semgrep=args_run.semgrep,
 		)
 	except (OSError, ValueError, json.JSONDecodeError, KeyError, re.error) as error_run:
 		print(f"run-plan: {error_run}", file=sys.stderr)

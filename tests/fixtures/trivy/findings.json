@@ -1,39 +1,81 @@
 {
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "ArtifactName": ".",
+  "ArtifactType": "filesystem",
+  "CreatedAt": "2026-09-16T16:45:50.572396+08:00",
+  "ReportID": "01a0a964-cc6c-7606-b2e3-af44ed0cc23c",
   "Results": [
     {
-      "Target": "requirements.txt",
-      "Vulnerabilities": [
-        {
-          "VulnerabilityID": "CVE-2024-0002",
-          "PkgName": "demo",
-          "InstalledVersion": "1.0",
-          "FixedVersion": "1.1",
-          "Severity": "HIGH",
-          "Title": "Demo vulnerability",
-          "PrimaryURL": "https://example.invalid/CVE-2024-0002",
-          "CweIDs": [
-            "CWE-20"
-          ]
-        }
-      ]
-    },
-    {
-      "Target": "main.tf",
+      "Class": "config",
+      "MisconfSummary": {
+        "Failures": 5,
+        "Successes": 22
+      },
       "Misconfigurations": [
         {
-          "ID": "AVD-AWS-0001",
-          "Title": "Public access enabled",
-          "Description": "Bucket is public",
-          "Message": "Public access is enabled",
-          "Severity": "MEDIUM",
-          "PrimaryURL": "https://example.invalid/AVD-AWS-0001",
           "CauseMetadata": {
-            "Resource": "aws_s3_bucket.demo",
-            "StartLine": 4
-          }
+            "Code": {
+              "Lines": [
+                {
+                  "Annotation": "",
+                  "Content": "FROM ubuntu:latest",
+                  "FirstCause": true,
+                  "Highlighted": "\u001b[38;5;64mFROM\u001b[0m\u001b[38;5;37m ubuntu:latest\u001b[0m",
+                  "IsCause": true,
+                  "LastCause": true,
+                  "Number": 1,
+                  "Truncated": false
+                }
+              ]
+            },
+            "EndLine": 1,
+            "Provider": "Dockerfile",
+            "Service": "general",
+            "StartLine": 1
+          },
+          "Description": "When using a 'FROM' statement you should use a specific tag to avoid uncontrolled behavior when the image is updated.",
+          "ID": "DS-0001",
+          "Message": "Specify a tag in the 'FROM' statement for image 'ubuntu'",
+          "Namespace": "builtin.dockerfile.DS001",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/ds-0001",
+          "Query": "data.builtin.dockerfile.DS001.deny",
+          "References": [
+            "https://avd.aquasec.com/misconfig/ds-0001"
+          ],
+          "Resolution": "Add a tag to the image in the 'FROM' statement",
+          "Severity": "MEDIUM",
+          "Status": "FAIL",
+          "Title": "':latest' tag used",
+          "Type": "Dockerfile Security Check"
+        },
+        {
+          "CauseMetadata": {
+            "Provider": "Dockerfile",
+            "Service": "general"
+          },
+          "Description": "Running containers with 'root' user can lead to a container escape situation. It is a best practice to run containers as non-root users, which can be done by adding a 'USER' statement to the Dockerfile.",
+          "ID": "DS-0002",
+          "Message": "Specify at least 1 USER command in Dockerfile with non-root user as argument",
+          "Namespace": "builtin.dockerfile.DS002",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/ds-0002",
+          "Query": "data.builtin.dockerfile.DS002.deny",
+          "References": [
+            "https://docs.docker.com/develop/develop-images/dockerfile_best-practices/",
+            "https://avd.aquasec.com/misconfig/ds-0002"
+          ],
+          "Resolution": "Add 'USER <non root user name>' line to the Dockerfile",
+          "Severity": "HIGH",
+          "Status": "FAIL",
+          "Title": "Image user should not be 'root'",
+          "Type": "Dockerfile Security Check"
         }
-      ]
+      ],
+      "Target": "Dockerfile",
+      "Type": "dockerfile",
+      "Vulnerabilities": []
     }
-  ]
+  ],
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.74.0"
+  }
 }

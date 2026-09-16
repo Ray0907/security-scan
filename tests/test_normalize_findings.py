@@ -4,7 +4,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.normalize_findings import normalizeEvidence, parseArguments, toMarkdown, toSarif
+from scripts.normalize_findings import (
+	normalizeEvidence,
+	parseArguments,
+	parseGovulncheck,
+	toMarkdown,
+	toSarif,
+)
 
 
 TOOLS_FIXTURE = {
@@ -98,12 +104,74 @@ class NormalizeFindingsTest(unittest.TestCase):
 		result_pnpm = normalizeEvidence(self.makeEvidence("pnpm"))
 		self.assertEqual("pnpm-lock.yaml", result_pnpm["findings"][0]["location"])
 
-	def testNormalizesLegacySemgrepOwaspAndSeverity(self):
+	def testGovulncheckParsesPrettyStreamAndUsesFirstTraceFrame(self):
+		content_output = """
+{
+  "osv": {"id": "GO-TEST", "summary": "test"}
+}
+{
+  "finding": {
+    "osv": "GO-TEST",
+    "fixed_version": "v1.2.3",
+    "trace": [
+      {"module": "vulnerable.module", "package": "vulnerable/package", "position": {"filename": "vulnerable.go", "line": 7}},
+      {"module": "caller.module", "package": "caller/package", "position": {"filename": "main.go", "line": 20}}
+    ]
+  }
+}
+"""
+
+		finding_scan = parseGovulncheck(content_output)[0]
+
+		self.assertEqual("vulnerable.module", finding_scan["package"])
+		self.assertEqual("vulnerable.go", finding_scan["location"])
+		self.assertEqual(7, finding_scan["line"])
+
+	def testRealFixturesPreserveScannerFields(self):
+		finding_pnpm = normalizeEvidence(self.makeEvidence("pnpm"))["findings"][0]
+		finding_yarn = normalizeEvidence(self.makeEvidence("yarn"))["findings"][0]
+		finding_gov = normalizeEvidence(self.makeEvidence("govulncheck"))["findings"][0]
+		finding_composer = normalizeEvidence(self.makeEvidence("composer"))["findings"][0]
+		findings_bundler = {
+			finding["id"]: finding
+			for finding in normalizeEvidence(self.makeEvidence("bundler-audit"))["findings"]
+		}
+		finding_cargo = normalizeEvidence(self.makeEvidence("cargo-audit"))["findings"][0]
+		finding_osv = normalizeEvidence(self.makeEvidence("osv-scanner"))["findings"][0]
+		findings_zizmor = {
+			finding["id"]: finding
+			for finding in normalizeEvidence(self.makeEvidence("zizmor"))["findings"]
+		}
+		finding_zizmor = findings_zizmor["artipacked"]
+
+		self.assertEqual("4.17.20", finding_pnpm["installed_version"])
+		self.assertEqual("4.17.20", finding_yarn["installed_version"])
+		self.assertTrue(finding_gov["id"].startswith("GO-"))
+		self.assertEqual("golang.org/x/text", finding_gov["package"])
+		self.assertTrue(finding_gov["fixed_versions"][0].startswith("v"))
+		self.assertEqual("composer.lock", finding_composer["location"])
+		self.assertIn("CVE-2026-69246", finding_composer["aliases"])
+		self.assertIn(
+			"~> 2.0.9, >= 2.0.9.4",
+			findings_bundler["CVE-2024-26146"]["fixed_versions"],
+		)
+		self.assertEqual("critical", findings_bundler["CVE-2022-30123"]["native_severity"])
+		self.assertTrue(finding_cargo["native_severity"].startswith("CVSS:"))
+		self.assertEqual("7.5", finding_osv["native_severity"])
+		self.assertIn("3.7", finding_osv["fixed_versions"])
+		self.assertEqual(".github/workflows/ci.yml", finding_zizmor["location"])
+		self.assertEqual(8, finding_zizmor["line"])
+		self.assertEqual(
+			"credential persistence through GitHub Actions artifacts",
+			finding_zizmor["summary"],
+		)
+
+	def testNormalizesSemgrepOwaspAndSeverity(self):
 		report_scan = normalizeEvidence(self.makeEvidence("semgrep"))
 		finding_scan = report_scan["findings"][0]
 
 		self.assertEqual("high", finding_scan["normalized_severity"])
-		self.assertEqual(["A05"], finding_scan["owasp_2025"])
+		self.assertIn("A05", finding_scan["owasp_2025"])
 
 	def testBaselineMarksUnchangedAndFixedFindings(self):
 		path_findings = self.makeEvidence("npm")

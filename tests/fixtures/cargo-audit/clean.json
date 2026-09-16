@@ -1,8 +1,1 @@
-{
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
-  "vulnerabilities": {
-    "found": false,
-    "count": 0,
-    "list": []
-  }
-}
+{"database":{"advisory-count":1246,"last-commit":"e2e640471715167f73e22eaf761f2e547adafeec","last-updated":"2026-09-14T18:06:06+02:00"},"lockfile":{"dependency-count":1},"settings":{"target_arch":[],"target_os":[],"severity":null,"ignore":[],"informational_warnings":["unmaintained","unsound","notice"]},"vulnerabilities":{"found":false,"count":0,"list":[]},"warnings":{}}

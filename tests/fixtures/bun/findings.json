@@ -1,34 +1,18 @@
 {
-  "lodash": [
+  "minimist": [
     {
-      "id": 1106913,
-      "url": "https://github.com/advisories/GHSA-35jh-r3h4-6jhm",
-      "title": "Command Injection in lodash",
-      "severity": "high",
-      "vulnerable_versions": "<4.17.21",
-      "cwe": [
-        "CWE-77",
-        "CWE-94"
-      ],
       "cvss": {
-        "score": 7.2,
-        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H"
-      }
-    },
-    {
-      "id": 1108258,
-      "url": "https://github.com/advisories/GHSA-29mw-wpgm-hmr9",
-      "title": "Regular Expression Denial of Service (ReDoS) in lodash",
-      "severity": "moderate",
-      "vulnerable_versions": ">=4.0.0 <4.17.21",
+        "score": 9.8,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+      },
       "cwe": [
-        "CWE-400",
-        "CWE-1333"
+        "CWE-1321"
       ],
-      "cvss": {
-        "score": 5.3,
-        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
-      }
+      "id": 1097678,
+      "severity": "critical",
+      "title": "Prototype Pollution in minimist",
+      "url": "https://github.com/advisories/GHSA-xvch-5gv4-984h",
+      "vulnerable_versions": ">=1.0.0 <1.2.6"
     }
   ]
 }

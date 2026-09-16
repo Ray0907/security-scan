@@ -1,24 +1,166 @@
 [
   {
-    "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
-    "ident": "artipacked",
-    "description": "Credentials persisted in artifact",
-    "url": "https://docs.zizmor.sh/audits/artipacked/",
+    "desc": "credential persistence through GitHub Actions artifacts",
     "determinations": {
-      "severity": "high",
-      "confidence": "high"
+      "confidence": "Low",
+      "persona": "Regular",
+      "severity": "Medium"
     },
+    "fixes": [
+      {
+        "disposition": "unsafe",
+        "key": {
+          "Local": {
+            "verbatim_path": ".github/workflows/ci.yml"
+          }
+        },
+        "title": "set persist-credentials: false"
+      }
+    ],
+    "ident": "artipacked",
+    "ignored": false,
     "locations": [
       {
-        "symbolic": {
-          "key": "jobs.build.steps.0"
-        },
         "concrete": {
-          "path": ".github/workflows/ci.yml",
-          "line": 8,
-          "column": 7
+          "comments": [],
+          "feature": "uses: actions/checkout@v4",
+          "location": {
+            "end_point": {
+              "column": 33,
+              "row": 7
+            },
+            "offset_span": {
+              "end": 122,
+              "start": 97
+            },
+            "start_point": {
+              "column": 8,
+              "row": 7
+            }
+          }
+        },
+        "symbolic": {
+          "annotation": "does not set persist-credentials: false",
+          "feature_kind": "Normal",
+          "key": {
+            "Local": {
+              "verbatim_path": ".github/workflows/ci.yml"
+            }
+          },
+          "kind": "Primary",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "build"
+              },
+              {
+                "Key": "steps"
+              },
+              {
+                "Index": 0
+              }
+            ]
+          }
         }
       }
-    ]
+    ],
+    "url": "https://docs.zizmor.sh/audits/#artipacked"
+  },
+  {
+    "desc": "overly broad permissions",
+    "determinations": {
+      "confidence": "Medium",
+      "persona": "Regular",
+      "severity": "Medium"
+    },
+    "fixes": [],
+    "ident": "excessive-permissions",
+    "ignored": false,
+    "locations": [
+      {
+        "concrete": {
+          "comments": [],
+          "feature": "  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: echo ${{ github.event.pull_request.title }}\n",
+          "location": {
+            "end_point": {
+              "column": 0,
+              "row": 9
+            },
+            "offset_span": {
+              "end": 180,
+              "start": 44
+            },
+            "start_point": {
+              "column": 2,
+              "row": 4
+            }
+          }
+        },
+        "symbolic": {
+          "annotation": "this job",
+          "feature_kind": "Normal",
+          "key": {
+            "Local": {
+              "verbatim_path": ".github/workflows/ci.yml"
+            }
+          },
+          "kind": "Related",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "build"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "concrete": {
+          "comments": [],
+          "feature": "  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: echo ${{ github.event.pull_request.title }}\n",
+          "location": {
+            "end_point": {
+              "column": 0,
+              "row": 9
+            },
+            "offset_span": {
+              "end": 180,
+              "start": 44
+            },
+            "start_point": {
+              "column": 2,
+              "row": 4
+            }
+          }
+        },
+        "symbolic": {
+          "annotation": "default permissions used due to no permissions: block",
+          "feature_kind": "Normal",
+          "key": {
+            "Local": {
+              "verbatim_path": ".github/workflows/ci.yml"
+            }
+          },
+          "kind": "Primary",
+          "route": {
+            "route": [
+              {
+                "Key": "jobs"
+              },
+              {
+                "Key": "build"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "url": "https://docs.zizmor.sh/audits/#excessive-permissions"
   }
 ]

@@ -1,46 +1,269 @@
 {
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "experimental_config": {
+    "licenses": {
+      "allowlist": null,
+      "summary": false
+    }
+  },
   "results": [
     {
-      "source": {
-        "path": "uv.lock",
-        "type": "lockfile"
-      },
       "packages": [
         {
+          "groups": [
+            {
+              "aliases": [
+                "CVE-2024-3651",
+                "GHSA-jjg7-2v4v-x38h",
+                "PYSEC-2024-60"
+              ],
+              "ids": [
+                "PYSEC-2024-60",
+                "GHSA-jjg7-2v4v-x38h"
+              ],
+              "max_severity": "7.5"
+            },
+            {
+              "aliases": [
+                "CVE-2026-45409",
+                "GHSA-65pc-fj4g-8rjx",
+                "PYSEC-2026-215"
+              ],
+              "ids": [
+                "PYSEC-2026-215",
+                "GHSA-65pc-fj4g-8rjx"
+              ],
+              "max_severity": "6.9"
+            }
+          ],
           "package": {
-            "name": "jinja2",
-            "version": "2.0",
-            "ecosystem": "PyPI"
+            "ecosystem": "PyPI",
+            "name": "idna",
+            "version": "2.10"
           },
           "vulnerabilities": [
             {
-              "id": "GHSA-test-test-test",
-              "aliases": [
-                "CVE-2024-0003"
+              "affected": [
+                {
+                  "database_specific": {
+                    "source": "https://github.com/pypa/advisory-database/blob/main/vulns/idna/PYSEC-2024-60.yaml"
+                  },
+                  "package": {
+                    "ecosystem": "PyPI",
+                    "name": "idna",
+                    "purl": "pkg:pypi/idna"
+                  },
+                  "ranges": [
+                    {
+                      "events": [
+                        {
+                          "introduced": "0"
+                        },
+                        {
+                          "fixed": "1d365e17e10d72d0b7876316fc7b9ca0eebdd38d"
+                        }
+                      ],
+                      "repo": "https://github.com/kjd/idna",
+                      "type": "GIT"
+                    },
+                    {
+                      "events": [
+                        {
+                          "introduced": "0.1"
+                        },
+                        {
+                          "fixed": "3.7"
+                        }
+                      ],
+                      "type": "ECOSYSTEM"
+                    }
+                  ],
+                  "versions": [
+                    "0.1",
+                    "0.2",
+                    "0.3",
+                    "0.4",
+                    "0.5",
+                    "0.6",
+                    "0.7",
+                    "0.8",
+                    "0.9",
+                    "1.0",
+                    "1.1",
+                    "2.0",
+                    "2.1",
+                    "2.10",
+                    "2.2",
+                    "2.3",
+                    "2.4",
+                    "2.5",
+                    "2.6",
+                    "2.7",
+                    "2.8",
+                    "2.9",
+                    "3.0",
+                    "3.1",
+                    "3.2",
+                    "3.3",
+                    "3.4",
+                    "3.5",
+                    "3.6",
+                    "v3.3",
+                    "v3.2",
+                    "v3.1",
+                    "v3.0",
+                    "v2.10",
+                    "v2.9",
+                    "v2.8",
+                    "v2.7",
+                    "v2.6",
+                    "v2.5",
+                    "v2.4",
+                    "v2.3",
+                    "v2.2",
+                    "v2.1",
+                    "v2.0",
+                    "v1.1",
+                    "v1.0",
+                    "v0.9",
+                    "v0.8",
+                    "v0.7",
+                    "v0.6",
+                    "v0.5",
+                    "v0.4",
+                    "v0.3",
+                    "v0.2"
+                  ]
+                }
               ],
-              "summary": "Template vulnerability",
+              "aliases": [
+                "CVE-2024-3651",
+                "GHSA-jjg7-2v4v-x38h"
+              ],
+              "details": "A vulnerability was identified in the kjd/idna library, specifically within the `idna.encode()` function, affecting version 3.6. The issue arises from the function's handling of crafted input strings, which can lead to quadratic complexity and consequently, a denial of service condition. This vulnerability is triggered by a crafted input that causes the `idna.encode()` function to process the input with considerable computational load, significantly increasing the processing time in a quadratic manner relative to the input size.",
+              "id": "PYSEC-2024-60",
+              "modified": "2026-06-10T17:01:21.102419358Z",
+              "published": "2024-07-07T18:15:00Z",
+              "references": [
+                {
+                  "type": "EVIDENCE",
+                  "url": "https://huntr.com/bounties/93d78d07-d791-4b39-a845-cbfabc44aadb"
+                },
+                {
+                  "type": "FIX",
+                  "url": "https://huntr.com/bounties/93d78d07-d791-4b39-a845-cbfabc44aadb"
+                },
+                {
+                  "type": "FIX",
+                  "url": "https://github.com/kjd/idna/commit/1d365e17e10d72d0b7876316fc7b9ca0eebdd38d"
+                },
+                {
+                  "type": "ADVISORY",
+                  "url": "https://github.com/advisories/GHSA-jjg7-2v4v-x38h"
+                }
+              ],
+              "schema_version": "1.7.5",
               "severity": [
                 {
-                  "type": "CVSS_V3",
-                  "score": "7.5"
+                  "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                  "type": "CVSS_V3"
+                }
+              ]
+            },
+            {
+              "affected": [
+                {
+                  "database_specific": {
+                    "source": "https://github.com/pypa/advisory-database/blob/main/vulns/idna/PYSEC-2026-215.yaml"
+                  },
+                  "ecosystem_specific": {},
+                  "package": {
+                    "ecosystem": "PyPI",
+                    "name": "idna",
+                    "purl": "pkg:pypi/idna"
+                  },
+                  "ranges": [
+                    {
+                      "events": [
+                        {
+                          "introduced": "0"
+                        },
+                        {
+                          "fixed": "3.15"
+                        }
+                      ],
+                      "type": "ECOSYSTEM"
+                    }
+                  ],
+                  "versions": [
+                    "0.1",
+                    "0.2",
+                    "0.3",
+                    "0.4",
+                    "0.5",
+                    "0.6",
+                    "0.7",
+                    "0.8",
+                    "0.9",
+                    "1.0",
+                    "1.1",
+                    "2.0",
+                    "2.1",
+                    "2.10",
+                    "2.2",
+                    "2.3",
+                    "2.4",
+                    "2.5",
+                    "2.6",
+                    "2.7",
+                    "2.8",
+                    "2.9",
+                    "3.0",
+                    "3.1",
+                    "3.10",
+                    "3.11",
+                    "3.12",
+                    "3.13",
+                    "3.14",
+                    "3.2",
+                    "3.3",
+                    "3.4",
+                    "3.5",
+                    "3.6",
+                    "3.7",
+                    "3.8",
+                    "3.9"
+                  ]
+                }
+              ],
+              "aliases": [
+                "CVE-2026-45409",
+                "GHSA-65pc-fj4g-8rjx"
+              ],
+              "details": "Internationalized Domain Names in Applications (IDNA) for Python provides support for Internationalized Domain Names in Applications (IDNA) and Unicode IDNA Compatibility Processing. In versions prior to 3.15, payloads such as `\"\\u0660\" * N` or `\"\\u30fb\" * N + \"\\u6f22\"` utilize the `valid_contexto` function prior to length rejection, and for high values of `N` will take a long time to process. This is the same issue as CVE-2024-3651, however the original remediation in 2024 was not a complete fix. A specially crafted argument to the `idna.encode()` function could consume significant resources. This may lead to a denial-of-service. Starting in version 3.14, the function rejects long inputs as soon as practicable prior to any further processing to minimize resource consumption. In version 3.15, this approach was extended to lesser used alternate functions (i.e. per-label conversions and codec support). A workaround is available. Domain names cannot exceed 253 characters in length. If this length limit is enforced prior to passing the domain to the `idna.encode()` function, it should no longer consume significant resources. This is triggered by arbitrarily large inputs that would not occur in normal usage, but may be passed to the library assuming there is no preliminary input validation by the higher-level application.",
+              "id": "PYSEC-2026-215",
+              "modified": "2026-06-16T16:15:04.639265054Z",
+              "published": "2026-06-05T23:16:43.343Z",
+              "references": [
+                {
+                  "type": "ADVISORY",
+                  "url": "https://github.com/kjd/idna/security/advisories/GHSA-65pc-fj4g-8rjx"
+                }
+              ],
+              "schema_version": "1.7.5",
+              "severity": [
+                {
+                  "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                  "type": "CVSS_V3"
                 }
               ]
             }
-          ],
-          "groups": [
-            {
-              "ids": [
-                "GHSA-test-test-test"
-              ],
-              "aliases": [
-                "CVE-2024-0003"
-              ],
-              "max_severity": 7.5
-            }
           ]
         }
-      ]
+      ],
+      "source": {
+        "path": "/private/tmp/claude-501/-private-tmp-security-scan/8ab28d90-a626-4715-b3a2-bcbd76b03742/scratchpad/sample/uvapp/uv.lock",
+        "type": "lockfile"
+      }
     }
   ]
 }

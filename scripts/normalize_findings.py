@@ -123,6 +123,7 @@ LOCKFILES_NODE = {
 	"pnpm": "pnpm-lock.yaml",
 	"yarn": "yarn.lock",
 	"bun": "bun.lock",
+	"composer": "composer.lock",
 }
 
 
@@ -130,6 +131,12 @@ def parseAdvisory(source: str, package: str, advisory: dict) -> dict:
 	identifier = advisory.get("id") or advisory.get("advisoryId") or advisory.get("cve")
 	url_advisory = advisory.get("url") or advisory.get("link")
 	aliases = list(advisory.get("cves") or [])
+	if advisory.get("cve"):
+		aliases.append(advisory["cve"])
+	aliases.extend(
+		source["remoteId"] for source in advisory.get("sources", [])
+		if source.get("remoteId")
+	)
 	identifier_github = advisory.get("github_advisory_id") or (
 		getIdentifier(url_advisory) if url_advisory and "GHSA-" in url_advisory else None
 	)
@@ -142,7 +149,7 @@ def parseAdvisory(source: str, package: str, advisory: dict) -> dict:
 	fixed_versions = advisory.get("fix_versions") or []
 	patched = advisory.get("patched_versions")
 	if patched and not fixed_versions:
-		fixed_versions = [patched]
+		fixed_versions = patched if isinstance(patched, list) else [patched]
 	return makeFinding(
 		source, identifier, "dependency", package=package,
 		fixed=fixed_versions, severity=advisory.get("severity"),
@@ -171,10 +178,13 @@ def parseNpm(content: str) -> list[dict]:
 
 def parsePnpm(content: str) -> list[dict]:
 	data = json.loads(content)
-	return [
-		parseAdvisory("pnpm", advisory.get("module_name", "unknown"), advisory)
-		for advisory in data["advisories"].values()
-	]
+	items = []
+	for advisory in data["advisories"].values():
+		item = parseAdvisory("pnpm", advisory.get("module_name", "unknown"), advisory)
+		findings = advisory.get("findings") or []
+		item["installed_version"] = findings[0].get("version") if findings else None
+		items.append(item)
+	return items
 
 
 def parseYarn(content: str) -> list[dict]:
@@ -187,11 +197,17 @@ def parseYarn(content: str) -> list[dict]:
 		if data.get("type") == "auditAdvisory":
 			found_shape = True
 			advisory = data["data"]["advisory"]
-			items.append(parseAdvisory("yarn", advisory.get("module_name", "unknown"), advisory))
+			item = parseAdvisory("yarn", advisory.get("module_name", "unknown"), advisory)
+			findings = advisory.get("findings") or []
+			item["installed_version"] = findings[0].get("version") if findings else None
+			items.append(item)
 		elif "advisories" in data:
 			found_shape = True
 			for advisory in data["advisories"].values():
-				items.append(parseAdvisory("yarn", advisory.get("module_name", "unknown"), advisory))
+				item = parseAdvisory("yarn", advisory.get("module_name", "unknown"), advisory)
+				findings = advisory.get("findings") or []
+				item["installed_version"] = findings[0].get("version") if findings else None
+				items.append(item)
 		elif data.get("type") == "auditSummary":
 			found_shape = True
 	if not found_shape:
@@ -217,14 +233,26 @@ def parsePipAudit(content: str) -> list[dict]:
 	]
 
 
+def parseJsonStream(content: str) -> list[dict]:
+	decoder_json = json.JSONDecoder()
+	items_json = []
+	index_json = 0
+	while index_json < len(content):
+		match_space = re.match(r"\s*", content[index_json:])
+		index_json += len(match_space.group())
+		if index_json == len(content):
+			break
+		item_json, index_end = decoder_json.raw_decode(content, index_json)
+		items_json.append(item_json)
+		index_json = index_end
+	return items_json
+
+
 def parseGovulncheck(content: str) -> list[dict]:
 	values_osv = {}
 	values_finding = []
 	found_shape = False
-	for line in content.splitlines():
-		if not line.strip():
-			continue
-		data = json.loads(line)
+	for data in parseJsonStream(content):
 		if "osv" in data:
 			found_shape = True
 			values_osv[data["osv"]["id"]] = data["osv"]
@@ -240,7 +268,7 @@ def parseGovulncheck(content: str) -> list[dict]:
 		identifier = finding.get("osv") or finding.get("id")
 		osv = values_osv.get(identifier, {})
 		trace = finding.get("trace") or [{}]
-		frame = trace[-1]
+		frame = trace[0]
 		position = frame.get("position") or {}
 		items.append(
 			makeFinding(
@@ -264,7 +292,7 @@ def parseCargoAudit(content: str) -> list[dict]:
 			makeFinding(
 				"cargo-audit", advisory["id"], "dependency", package=package.get("name") or advisory.get("package"),
 				installed=package.get("version"), fixed=value.get("versions", {}).get("patched"),
-				score=advisory.get("cvss"), location="Cargo.lock",
+				severity=advisory.get("cvss"), score=advisory.get("cvss"), location="Cargo.lock",
 				summary=advisory.get("title") or advisory.get("description"),
 				references=[advisory["url"]] if advisory.get("url") else [],
 			)
@@ -274,11 +302,14 @@ def parseCargoAudit(content: str) -> list[dict]:
 
 def parseComposer(content: str) -> list[dict]:
 	data = json.loads(content)
-	return [parseAdvisory("composer", package, advisory) for package, values in data["advisories"].items() for advisory in values]
+	advisories = data["advisories"]
+	if isinstance(advisories, list):
+		return []
+	return [parseAdvisory("composer", package, advisory) for package, values in advisories.items() for advisory in values]
 
 
 def parseBundlerAudit(content: str) -> list[dict]:
-	data = json.loads(content)
+	data = json.loads(content[content.index("{"):])
 	items = []
 	for result in data["results"]:
 		if result.get("type") != "unpatched_gem":
@@ -288,8 +319,9 @@ def parseBundlerAudit(content: str) -> list[dict]:
 		items.append(
 			makeFinding(
 				"bundler-audit", advisory["id"], "dependency", package=gem.get("name"),
-				installed=gem.get("version"), fixed=[advisory["solution"]] if advisory.get("solution") else [],
-				severity=advisory.get("criticality"), location="Gemfile.lock",
+				installed=gem.get("version"),
+				fixed=advisory.get("patched_versions") or ([advisory["solution"]] if advisory.get("solution") else []),
+				severity=advisory.get("criticality"), score=advisory.get("cvss_v3"), location="Gemfile.lock",
 				summary=advisory.get("title"), references=[advisory["url"]] if advisory.get("url") else [],
 			)
 		)
@@ -340,12 +372,22 @@ def parseOsvScanner(content: str) -> list[dict]:
 				for group in package_data.get("groups", []) for identifier in group.get("ids", [])
 			}
 			for vulnerability in package_data.get("vulnerabilities", []):
+				fixed_versions = sorted({
+					event["fixed"]
+					for affected in vulnerability.get("affected", [])
+					for range_data in affected.get("ranges", [])
+					for event in range_data.get("events", [])
+					if event.get("fixed")
+				})
+				score = groups_score.get(vulnerability["id"])
 				items.append(
 					makeFinding(
 						"osv-scanner", vulnerability["id"], "dependency", package=package.get("name"),
-						installed=package.get("version"), score=groups_score.get(vulnerability["id"]),
-						location=location, summary=vulnerability.get("summary"),
+						installed=package.get("version"), fixed=fixed_versions,
+						severity=score, score=score, location=location,
+						summary=vulnerability.get("summary") or vulnerability.get("details"),
 						aliases=vulnerability.get("aliases"),
+						references=[reference["url"] for reference in vulnerability.get("references", []) if reference.get("url")],
 					)
 				)
 	return items
@@ -416,11 +458,17 @@ def parseZizmor(content: str) -> list[dict]:
 		determinations = finding.get("determinations") or {}
 		location_data = (finding.get("locations") or [{}])[0]
 		concrete = location_data.get("concrete") or location_data
+		symbolic = location_data.get("symbolic") or {}
+		key_local = symbolic.get("key", {}).get("Local", {})
+		start_point = concrete.get("location", {}).get("start_point", {})
+		line = concrete.get("line")
+		if line is None and start_point.get("row") is not None:
+			line = start_point["row"] + 1
 		items.append(
 			makeFinding(
 				"zizmor", finding["ident"], "ci", severity=determinations.get("severity"),
-				location=concrete.get("path", ".github/workflows"),
-				line=concrete.get("line"), summary=finding.get("description"),
+				location=concrete.get("path") or key_local.get("path") or key_local.get("verbatim_path") or ".github/workflows",
+				line=line, summary=finding.get("description") or finding.get("desc"),
 				references=[finding["url"]] if finding.get("url") else [],
 				rule_id=finding["ident"], confidence=determinations.get("confidence"),
 				owasp=["A03"],

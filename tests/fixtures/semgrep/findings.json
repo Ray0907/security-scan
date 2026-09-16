@@ -1,32 +1,259 @@
 {
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "engine_requested": "OSS",
+  "errors": [],
+  "paths": {
+    "scanned": [
+      ".github/workflows/ci.yml",
+      "bunapp/bun.lock",
+      "bunapp/package.json",
+      "code/app.js",
+      "code/app.py",
+      "evidence/01-ci-root/meta.json",
+      "evidence/01-ci-root/stderr.txt",
+      "evidence/01-ci-root/stdout.txt",
+      "evidence/02-secrets-root/meta.json",
+      "evidence/02-secrets-root/stderr.txt",
+      "evidence/02-secrets-root/stdout.txt",
+      "evidence/03-node-bunapp/meta.json",
+      "evidence/03-node-bunapp/stderr.txt",
+      "evidence/03-node-bunapp/stdout.txt",
+      "evidence/04-go-goapp/meta.json",
+      "evidence/04-go-goapp/stderr.txt",
+      "evidence/04-go-goapp/stdout.txt",
+      "evidence/05-container-infra/meta.json",
+      "evidence/05-container-infra/stderr.txt",
+      "evidence/05-container-infra/stdout.txt",
+      "evidence/06-node-npmapp/meta.json",
+      "evidence/06-node-npmapp/stderr.txt",
+      "evidence/06-node-npmapp/stdout.txt",
+      "evidence/07-php-phpapp/meta.json",
+      "evidence/07-php-phpapp/stderr.txt",
+      "evidence/07-php-phpapp/stdout.txt",
+      "evidence/08-node-pnpmapp/meta.json",
+      "evidence/08-node-pnpmapp/stderr.txt",
+      "evidence/08-node-pnpmapp/stdout.txt",
+      "evidence/09-python-pyapp/meta.json",
+      "evidence/09-python-pyapp/stderr.txt",
+      "evidence/09-python-pyapp/stdout.txt",
+      "evidence/10-ruby-rubyapp/meta.json",
+      "evidence/10-ruby-rubyapp/stderr.txt",
+      "evidence/10-ruby-rubyapp/stdout.txt",
+      "evidence/11-rust-rustapp/meta.json",
+      "evidence/11-rust-rustapp/stderr.txt",
+      "evidence/11-rust-rustapp/stdout.txt",
+      "evidence/12-python-uvapp/meta.json",
+      "evidence/12-python-uvapp/stderr.txt",
+      "evidence/12-python-uvapp/stdout.txt",
+      "evidence/13-node-yarnapp/meta.json",
+      "evidence/13-node-yarnapp/stderr.txt",
+      "evidence/13-node-yarnapp/stdout.txt",
+      "findings.json",
+      "goapp/go.mod",
+      "goapp/go.sum",
+      "goapp/main.go",
+      "infra/Dockerfile",
+      "infra/main.tf",
+      "infra/pod.yaml",
+      "npmapp/package-lock.json",
+      "npmapp/package.json",
+      "phpapp/composer.json",
+      "phpapp/composer.lock",
+      "plan.json",
+      "pnpmapp/package.json",
+      "pnpmapp/pnpm-lock.yaml",
+      "pyapp/requirements.txt",
+      "rubyapp/Gemfile",
+      "rubyapp/Gemfile.lock",
+      "rustapp/Cargo.lock",
+      "rustapp/Cargo.toml",
+      "rustapp/src/main.rs",
+      "secrets/config.txt",
+      "uvapp/pyproject.toml",
+      "uvapp/uv.lock",
+      "yarn-command.txt",
+      "yarnapp/package.json",
+      "yarnapp/yarn.lock"
+    ]
+  },
+  "profiling_results": [],
   "results": [
     {
-      "check_id": "python.lang.security.audit.eval-detected",
-      "path": "app.py",
-      "start": {
-        "line": 3,
-        "col": 1
-      },
+      "check_id": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
       "end": {
-        "line": 3,
-        "col": 20
+        "col": 34,
+        "line": 8,
+        "offset": 122
       },
       "extra": {
-        "message": "Use of eval on user input",
-        "severity": "ERROR",
-        "lines": "eval(user_input)",
+        "engine_kind": "OSS",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "message": "GitHub Actions step uses a mutable tag or branch reference. Tags and branch names can be silently repointed by the action owner, enabling supply-chain attacks \u2014 as seen in the trivy-action and kics-github-action compromises. Pin the reference to a full 40-character commit SHA instead, e.g. `uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608`.",
         "metadata": {
-          "owasp": [
-            "A03:2021 - Injection"
-          ],
+          "category": "security",
+          "confidence": "HIGH",
           "cwe": [
-            "CWE-95"
+            "CWE-1357: Reliance on Insufficiently Trustworthy Component",
+            "CWE-353: Missing Support for Integrity Check"
           ],
-          "confidence": "HIGH"
-        }
+          "impact": "HIGH",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "likelihood": "MEDIUM",
+          "owasp": [
+            "A08:2021 - Software and Data Integrity Failures",
+            "A08:2025 - Software and Data Integrity Failures"
+          ],
+          "references": [
+            "https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-third-party-actions"
+          ],
+          "shortlink": "https://sg.run/2LgAL",
+          "source": "https://semgrep.dev/r/yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+          "subcategory": [
+            "vuln"
+          ],
+          "technology": [
+            "github-actions"
+          ],
+          "vulnerability_class": [
+            "Cryptographic Issues",
+            "Other"
+          ]
+        },
+        "severity": "WARNING",
+        "validation_state": "NO_VALIDATOR"
+      },
+      "path": ".github/workflows/ci.yml",
+      "start": {
+        "col": 9,
+        "line": 8,
+        "offset": 97
+      }
+    },
+    {
+      "check_id": "yaml.github-actions.security.run-shell-injection.run-shell-injection",
+      "end": {
+        "col": 57,
+        "line": 9,
+        "offset": 179
+      },
+      "extra": {
+        "engine_kind": "OSS",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "message": "Using variable interpolation `${{...}}` with `github` context data in a `run:` step could allow an attacker to inject their own code into the runner. This would allow them to steal secrets and code. `github` context data can have arbitrary user input and should be treated as untrusted. Instead, use an intermediate environment variable with `env:` to store the data and use the environment variable in the `run:` script. Be sure to use double-quotes the environment variable, like this: \"$ENVVAR\".",
+        "metadata": {
+          "category": "security",
+          "confidence": "HIGH",
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+          ],
+          "cwe2021-top25": true,
+          "cwe2022-top25": true,
+          "impact": "HIGH",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "likelihood": "HIGH",
+          "owasp": [
+            "A01:2017 - Injection",
+            "A03:2021 - Injection",
+            "A05:2025 - Injection"
+          ],
+          "references": [
+            "https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-ri[REDACTED]",
+            "https://securitylab.github.com/research/github-actions-untrusted-input/"
+          ],
+          "shortlink": "https://sg.run/pkzk",
+          "source": "https://semgrep.dev/r/yaml.github-actions.security.run-shell-injection.run-shell-injection",
+          "subcategory": [
+            "vuln"
+          ],
+          "technology": [
+            "github-actions"
+          ],
+          "vulnerability_class": [
+            "Command Injection"
+          ]
+        },
+        "severity": "ERROR",
+        "validation_state": "NO_VALIDATOR"
+      },
+      "path": ".github/workflows/ci.yml",
+      "start": {
+        "col": 9,
+        "line": 9,
+        "offset": 131
       }
     }
   ],
-  "errors": []
+  "skipped_rules": [],
+  "time": {
+    "fixpoint_timeouts": [],
+    "matching_time": {
+      "per_file_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "total_time": 0.0,
+      "very_slow_rules_on_files": [],
+      "very_slow_stats": {
+        "count_ratio": 0.0,
+        "time_ratio": 0.0
+      }
+    },
+    "max_memory_bytes": 860971520,
+    "parsing_time": {
+      "per_file_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "total_time": 0.0,
+      "very_slow_files": [],
+      "very_slow_stats": {
+        "count_ratio": 0.0,
+        "time_ratio": 0.0
+      }
+    },
+    "prefiltering": {
+      "file_level_time": 0.0,
+      "project_level_time": 0.0,
+      "rules_matched_ratio": 0.24688279301745636,
+      "rules_selected_ratio": 0.24688279301745636,
+      "rules_with_file_prefilters_ratio": 0.8341645885286783,
+      "rules_with_project_prefilters_ratio": 0.0
+    },
+    "profiling_times": {
+      "config_time": 0.385174036026001,
+      "core_time": 0.5419666767120361,
+      "ignores_time": 0.0003657341003417969,
+      "total_time": 0.9360029697418213
+    },
+    "rules": [],
+    "rules_parse_time": 0.1065671443939209,
+    "scanning_time": {
+      "per_file_time": {
+        "mean": 0.0026631849051932614,
+        "std_dev": 5.988628406092793e-05
+      },
+      "total_time": 0.45007824897766113,
+      "very_slow_files": [],
+      "very_slow_stats": {
+        "count_ratio": 0.0,
+        "time_ratio": 0.0
+      }
+    },
+    "tainting_time": {
+      "per_def_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "total_time": 0.0,
+      "very_slow_rules_on_defs": [],
+      "very_slow_stats": {
+        "count_ratio": 0.0,
+        "time_ratio": 0.0
+      }
+    },
+    "targets": [],
+    "total_bytes": 0
+  },
+  "version": "1.176.0"
 }

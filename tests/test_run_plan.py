@@ -85,6 +85,26 @@ class RunPlanTest(unittest.TestCase):
 		self.assertEqual("failed", self.readRun()["records"][0]["state"])
 
 	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
+	@patch("scripts.run_plan.getToolVersion", return_value="semgrep 1")
+	@patch("scripts.run_plan.shutil.which", return_value="/usr/bin/semgrep")
+	@patch("scripts.run_plan.subprocess.run")
+	def testAppendsSemgrepRecord(self, run_mock, _which, _version, _git):
+		self.writePlan([])
+		run_mock.return_value = subprocess.CompletedProcess(
+			["semgrep"], 0, stdout='{"results":[]}', stderr="",
+		)
+
+		runPlan(self.path_plan, self.path_out, semgrep=True, quiet=True)
+
+		meta_semgrep = self.readRun()["records"][0]
+		self.assertEqual("code", meta_semgrep["kind"])
+		self.assertEqual("semgrep", meta_semgrep["tool"])
+		self.assertEqual(
+			["semgrep", "scan", "--config", "p/owasp-top-ten", "--json", "--metrics=off", "."],
+			meta_semgrep["command"],
+		)
+
+	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
 	@patch("scripts.run_plan.shutil.which", return_value=None)
 	def testOnlyAndSkipFilterKinds(self, _which, _git):
 		self.writePlan([self.project(), self.project("python", "pip-audit")])
@@ -129,7 +149,7 @@ class RunPlanTest(unittest.TestCase):
 			[
 				"run_plan.py", "-", "--out", "evidence", "--timeout", "5",
 				"--only", "node", "--skip", "ci", "--redact-pattern", "secret",
-				"--quiet", "--force",
+				"--quiet", "--force", "--semgrep",
 			],
 		):
 			args_run = parseArguments()
@@ -140,6 +160,7 @@ class RunPlanTest(unittest.TestCase):
 		self.assertEqual(["ci"], args_run.skip)
 		self.assertTrue(args_run.quiet)
 		self.assertTrue(args_run.force)
+		self.assertTrue(args_run.semgrep)
 
 
 if __name__ == "__main__":

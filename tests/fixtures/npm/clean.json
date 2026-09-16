@@ -1,5 +1,22 @@
 {
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
   "auditReportVersion": 2,
-  "vulnerabilities": {}
+  "vulnerabilities": {},
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 1,
+      "dev": 0,
+      "optional": 0,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 0
+    }
+  }
 }

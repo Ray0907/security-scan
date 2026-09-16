@@ -1,11 +1,1 @@
-{
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
-  "dependencies": [
-    {
-      "name": "safe",
-      "version": "1.0",
-      "vulns": []
-    }
-  ],
-  "fixes": []
-}
+{"dependencies": [], "fixes": []}

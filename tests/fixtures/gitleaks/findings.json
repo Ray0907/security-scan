@@ -1,11 +1,45 @@
 [
   {
-    "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
-    "RuleID": "generic-api-key",
-    "Description": "Generic API Key",
-    "File": "config.env",
+    "Author": "",
+    "Commit": "",
+    "Date": "",
+    "Description": "Identified a Private Key, which may compromise cryptographic security and sensitive data encryption.",
+    "Email": "",
+    "EndColumn": 30,
+    "EndLine": 6,
+    "Entropy": 5.296657,
+    "File": "secrets/config.txt",
+    "Fingerprint": "secrets/config.txt:private-key:2",
+    "Match": "REDACTED",
+    "Message": "",
+    "RuleID": "private-key",
+    "Secret": "REDACTED",
+    "StartColumn": 2,
     "StartLine": 2,
-    "Secret": "[REDACTED]",
-    "Fingerprint": "config.env:generic-api-key:2"
+    "SymlinkFile": "",
+    "Tags": []
+  },
+  {
+    "Author": "",
+    "Commit": "",
+    "Date": "",
+    "Description": "Identified a Private Key, which may compromise cryptographic security and sensitive data encryption.",
+    "Email": "",
+    "EndColumn": 30,
+    "EndLine": 6,
+    "Entropy": 4.649857,
+    "File": "secrets/config.txt",
+    "Fingerprint": "secrets/config.txt:private-key:2",
+    "Match": "REDACTED",
+    "Message": "",
+    "RuleID": "private-key",
+    "Secret": "REDACTED",
+    "StartColumn": 2,
+    "StartLine": 2,
+    "SymlinkFile": "",
+    "Tags": [
+      "decoded:base64",
+      "decode-depth:1"
+    ]
   }
 ]

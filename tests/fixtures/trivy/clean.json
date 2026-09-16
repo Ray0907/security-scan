@@ -1,4 +1,10 @@
 {
-  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
-  "Results": []
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.74.0"
+  },
+  "ReportID": "01a0a96b-95e6-7217-b360-b44fa6960d06",
+  "CreatedAt": "2026-09-16T16:53:15.366138+08:00",
+  "ArtifactName": ".",
+  "ArtifactType": "filesystem"
 }
