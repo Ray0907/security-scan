@@ -45,8 +45,34 @@ location, and line. Do not invent a normalized severity when the scanner provide
 mapping; use `unknown`.
 
 `scripts/normalize_findings.py` emits schema v1 JSON with scan metadata, scanner states, findings,
-fixed baseline entries, and A01-A10 coverage. Baselines match fingerprints: present fingerprints
-are `unchanged`, new fingerprints are `new`, and missing prior fingerprints are listed as `fixed`.
+fixed baseline entries, and A01-A10 coverage:
+
+```json
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T00:00:00+00:00",
+  "plan_root": "/work/app",
+  "git": {"commit": "abc", "branch": "main", "dirty": false},
+  "scanners": [],
+  "findings": [],
+  "fixed": [],
+  "owasp_coverage": {"A01": "not-scanned"}
+}
+```
+
+Baselines match fingerprints: present fingerprints are `unchanged`, new fingerprints are `new`,
+and missing prior fingerprints are listed as `fixed`.
+
+## SARIF Mapping
+
+| Normalized field | SARIF 2.1.0 field |
+| --- | --- |
+| Tool and version | `runs[].tool.driver.name` and `version` |
+| Rule or advisory ID | `runs[].tool.driver.rules[].id` and `results[].ruleId` |
+| Summary | `results[].message.text` |
+| Severity | `results[].level`: error, warning, or note |
+| Location and line | `artifactLocation.uri` and `region.startLine` |
+| Fingerprint | `partialFingerprints.primaryLocationLineHash` |
 
 ## Secret Redaction
 

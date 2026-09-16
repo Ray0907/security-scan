@@ -15,6 +15,7 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   redaction before persistence.
 - A fixture-tested findings normalizer with JSON, SARIF, and Markdown output, OWASP mapping,
   severity normalization, stable fingerprints, and baseline diffs.
+- End-to-end planner, runner, normalizer, evidence layout, baseline, and SARIF documentation.
 
 ## [1.2.0] - 2026-09-16
 

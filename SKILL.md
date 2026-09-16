@@ -59,6 +59,9 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
    python3 <skill-root>/scripts/normalize_findings.py scan-evidence --out security-findings.json
    ```
 
+   For repeat scans, pass `--baseline security-findings.json`. Use `--format sarif` for a GitHub
+   code-scanning upload. Read every normalized scanner state and reason; normalization does not
+   replace the completion gate for `failed`, `skipped`, or `inconclusive` coverage.
 5. Do not run planner records marked `inconclusive`; their command is null because project evidence
    is ambiguous. Preserve the planner's reason and report the affected scope as incomplete. Mark
    `needs-lockfile`, `needs-export`, and missing-tool entries as `inconclusive` or `skipped`. Offer

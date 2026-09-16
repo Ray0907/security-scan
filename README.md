@@ -53,6 +53,17 @@ Scan this repository for security issues.
 `--deps-only` and `--code-only` are mutually exclusive. Persistent reminders are client-specific;
 the skill will not claim `--auto-remind` is active until a supported hook or automation is chosen.
 
+The local three-command pipeline is:
+
+```bash
+python3 scripts/scan_plan.py . --pretty > plan.json
+python3 scripts/run_plan.py plan.json --out scan-evidence
+python3 scripts/normalize_findings.py scan-evidence --out security-findings.json
+```
+
+Add `--baseline security-findings.json` on repeat scans, or `--format sarif` when preparing output
+for GitHub code scanning.
+
 ## Example
 
 For a monorepo with a pnpm app, a Python API with a Dockerfile, and an unlocked Rust crate:
@@ -170,8 +181,16 @@ semgrep scan --config p/owasp-top-ten --validate --metrics=off
 security-scan/
 ├── .github/workflows/validate.yml
 ├── docs/                       # Design documents
-├── scripts/scan_plan.py
-├── tests/test_scan_plan.py
+├── scripts/
+│   ├── normalize_findings.py
+│   ├── redaction.py
+│   ├── run_plan.py
+│   └── scan_plan.py
+├── tests/
+│   ├── fixtures/               # Minimal scanner output samples
+│   ├── test_normalize_findings.py
+│   ├── test_run_plan.py
+│   └── test_scan_plan.py
 ├── references/
 │   ├── OWASP.md
 │   ├── REPORTING.md

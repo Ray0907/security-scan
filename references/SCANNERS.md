@@ -135,9 +135,13 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 cargo install cargo-audit
 gem install bundler-audit
 brew install trivy
+brew install osv-scanner gitleaks zizmor
+cargo install zizmor
+uv tool install zizmor
 ```
 
-Composer and the relevant Node package manager are expected to come from the project toolchain.
+Composer, Bun, and the relevant Node package manager are expected to come from the project
+toolchain. Choose one supported Zizmor installation method; do not install it three times.
 Avoid remote-script pipelines such as `curl ... | sh`.
 
 ## NVD Enrichment
