@@ -11,8 +11,10 @@ from pathlib import Path
 
 try:
 	from scripts.redaction import redactText
+	from scripts.validate_report import loadSchema, validateDocument
 except ModuleNotFoundError:
 	from redaction import redactText
+	from validate_report import loadSchema, validateDocument
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4, "unknown": 5}
 CONFIDENCE_ORDER = {"high": 0, "medium": 1, "low": 2, "unknown": 3}
@@ -631,7 +633,7 @@ def normalizeEvidence(
 		scanner["finding_count"] = sum(
 			1 for finding in items_finding if finding["source"] == scanner["tool"]
 		)
-	data_output = {
+	data_output = redactValue({
 		"schema_version": 1,
 		"generated_at": getTimestamp(),
 		"plan_root": data_run["plan_root"],
@@ -641,8 +643,12 @@ def normalizeEvidence(
 		"fixed": items_fixed,
 		"owasp_coverage": getCoverage(items_scanner, items_finding),
 		"verdicts_unmatched": sorted(verdicts_unmatched),
-	}
-	return redactValue(data_output)
+	})
+	schema_report = loadSchema(Path(__file__).parents[1] / "schema" / "security-findings.schema.json")
+	errors_schema = validateDocument(data_output, schema_report)
+	if errors_schema:
+		raise ValueError("normalized report schema mismatch:\n" + "\n".join(errors_schema))
+	return data_output
 
 
 def toSarif(data_report: dict) -> dict:
@@ -741,13 +747,17 @@ def parseArguments() -> argparse.Namespace:
 
 def runMain() -> None:
 	args_output = parseArguments()
-	data_report = normalizeEvidence(
-		args_output.evidence,
-		path_baseline=args_output.baseline,
-		path_verdicts=args_output.verdicts,
-		severities=set(args_output.severity.lower().split(",")) if args_output.severity else None,
-		categories_owasp=set(args_output.owasp.upper().split(",")) if args_output.owasp else None,
-	)
+	try:
+		data_report = normalizeEvidence(
+			args_output.evidence,
+			path_baseline=args_output.baseline,
+			path_verdicts=args_output.verdicts,
+			severities=set(args_output.severity.lower().split(",")) if args_output.severity else None,
+			categories_owasp=set(args_output.owasp.upper().split(",")) if args_output.owasp else None,
+		)
+	except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error_output:
+		print(f"normalize-findings: {error_output}", file=sys.stderr)
+		raise SystemExit(1) from error_output
 	if args_output.format == "sarif":
 		content_output = json.dumps(toSarif(data_report), indent=2, sort_keys=True) + "\n"
 	elif args_output.format == "markdown":

@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts.scan_plan import buildScanPlan, parseArguments
+from scripts.validate_report import loadSchema, validateDocument
 
 
 class ScanPlanTest(unittest.TestCase):
@@ -26,6 +27,12 @@ class ScanPlanTest(unittest.TestCase):
 			for item_project in plan_scan["projects"]
 			if item_project["kind"] == kind_project
 		)
+
+	def testPlannerOutputMatchesPublishedSchema(self):
+		plan_scan = buildScanPlan(self.path_root)
+		schema = loadSchema(Path(__file__).parents[1] / "schema" / "scan-plan.schema.json")
+
+		self.assertEqual([], validateDocument(plan_scan, schema))
 
 	def testSelectsPnpmWhenPackageJsonAlsoExists(self):
 		self.writeFile("package.json", '{"name":"app"}')

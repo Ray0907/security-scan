@@ -1,0 +1,117 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 2
+    },
+    "root": {
+      "type": "string"
+    },
+    "excluded": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "node",
+              "python",
+              "dart",
+              "elixir",
+              "swift",
+              "dotnet",
+              "deno",
+              "go",
+              "rust",
+              "php",
+              "ruby",
+              "java",
+              "container",
+              "iac",
+              "secrets",
+              "ci"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "needs-lockfile",
+              "needs-export",
+              "inconclusive"
+            ]
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "string"
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "path",
+          "tool",
+          "status",
+          "command"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "root",
+    "excluded",
+    "projects"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Ray0907/security-scan/main/schema/scan-plan.schema.json"
+}

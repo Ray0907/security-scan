@@ -1,0 +1,548 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "plan_root": {
+      "type": "string"
+    },
+    "git": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "commit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "branch": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "dirty": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "commit",
+            "branch",
+            "dirty"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scanners": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tool_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "clean",
+              "findings",
+              "failed",
+              "skipped",
+              "inconclusive"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finding_count": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "path",
+          "tool",
+          "tool_version",
+          "state",
+          "reason",
+          "finding_count"
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "dependency",
+              "misconfiguration",
+              "code",
+              "secret",
+              "ci"
+            ]
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "installed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fixed_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "native_severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "normalized_severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info",
+              "unknown"
+            ]
+          },
+          "owasp_2025": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "A01",
+                "A02",
+                "A03",
+                "A04",
+                "A05",
+                "A06",
+                "A07",
+                "A08",
+                "A09",
+                "A10"
+              ]
+            }
+          },
+          "location": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cwe": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "unknown"
+            ]
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "snippet_omitted_reason": {
+            "type": "string"
+          },
+          "change": {
+            "type": "string",
+            "enum": [
+              "new",
+              "unchanged"
+            ]
+          },
+          "enrichment": {
+            "type": "object"
+          },
+          "owasp_normalization": {
+            "type": "string",
+            "enum": [
+              "ambiguous"
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "needs_validation",
+              "rejected"
+            ]
+          },
+          "verdict_evidence": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "trace": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "unresolved_fact": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reviewed_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "reviewer": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "reason",
+              "trace",
+              "unresolved_fact",
+              "reviewed_at",
+              "reviewer"
+            ]
+          },
+          "verdict_carried_forward": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "aliases",
+          "source",
+          "type",
+          "package",
+          "installed_version",
+          "fixed_versions",
+          "native_severity",
+          "normalized_severity",
+          "owasp_2025",
+          "location",
+          "summary",
+          "references",
+          "cwe",
+          "rule_id",
+          "line",
+          "confidence",
+          "fingerprint"
+        ]
+      }
+    },
+    "fixed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fingerprint": {
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fingerprint",
+          "id",
+          "package"
+        ]
+      }
+    },
+    "owasp_coverage": {
+      "type": "object",
+      "properties": {
+        "A01": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A02": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A03": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A04": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A05": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A06": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A07": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A08": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A09": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        },
+        "A10": {
+          "type": "string",
+          "enum": [
+            "findings",
+            "automated-covered",
+            "manual-review-needed",
+            "not-scanned",
+            "not-applicable"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10"
+      ]
+    },
+    "verdicts_unmatched": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "plan_root",
+    "git",
+    "scanners",
+    "findings",
+    "fixed",
+    "owasp_coverage",
+    "verdicts_unmatched"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Ray0907/security-scan/main/schema/security-findings.schema.json"
+}

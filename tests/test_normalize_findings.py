@@ -12,6 +12,7 @@ from scripts.normalize_findings import (
 	normalizeEvidence,
 	parseArguments,
 	parseGovulncheck,
+	runMain,
 	toMarkdown,
 	toSarif,
 )
@@ -328,6 +329,17 @@ class NormalizeFindingsTest(unittest.TestCase):
 		)
 
 		self.assertEqual([], report_scan["findings"])
+
+	def testNormalizerFailsWhenOwnReportViolatesSchema(self):
+		path_evidence = self.makeEvidence("npm")
+		output_error = io.StringIO()
+		with patch("scripts.normalize_findings.validateDocument", return_value=["/findings: broken"]), patch(
+			"sys.argv", ["normalize_findings.py", str(path_evidence)]
+		), redirect_stderr(output_error), self.assertRaises(SystemExit) as raised_exit:
+			runMain()
+
+		self.assertEqual(1, raised_exit.exception.code)
+		self.assertIn("/findings: broken", output_error.getvalue())
 
 	def testParsesNormalizerOptions(self):
 		with patch(

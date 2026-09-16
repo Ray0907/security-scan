@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts.run_plan import getGitMetadata, parseArguments, runPlan
+from scripts.validate_report import loadSchema, validateDocument
 
 
 class RunPlanTest(unittest.TestCase):
@@ -118,6 +119,14 @@ class RunPlanTest(unittest.TestCase):
 		)
 
 		self.assertEqual(["node"], [item["kind"] for item in self.readRun()["records"]])
+
+	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
+	def testRunOutputMatchesPublishedSchema(self, _git):
+		self.writePlan([])
+		runPlan(self.path_plan, self.path_out, quiet=True)
+		schema = loadSchema(Path(__file__).parents[1] / "schema" / "run.schema.json")
+
+		self.assertEqual([], validateDocument(self.readRun(), schema))
 
 	def testRefusesNonEmptyOutputUnlessForced(self):
 		self.writePlan([])
