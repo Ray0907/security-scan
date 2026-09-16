@@ -16,6 +16,7 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A fixture-tested findings normalizer with JSON, SARIF, and Markdown output, OWASP mapping,
   severity normalization, stable fingerprints, and baseline diffs.
 - End-to-end planner, runner, normalizer, evidence layout, baseline, and SARIF documentation.
+- A validated Claude Code plugin manifest for skills-directory installations.
 
 ## [1.2.0] - 2026-09-16
 

@@ -22,6 +22,9 @@ For Claude Code:
 git clone https://github.com/Ray0907/security-scan.git ~/.claude/skills/security-scan
 ```
 
+Restart Claude Code, open `/plugin`, and verify `security-scan@skills-dir` is enabled. The bundled
+Claude Code plugin manifest points its skill directory at this repository root.
+
 Other clients use their own skills directory. Consult the client's documentation for its install
 location and invocation UI.
 
@@ -179,6 +182,7 @@ semgrep scan --config p/owasp-top-ten --validate --metrics=off
 
 ```text
 security-scan/
+├── .claude-plugin/plugin.json
 ├── .github/workflows/validate.yml
 ├── docs/                       # Design documents
 ├── scripts/
