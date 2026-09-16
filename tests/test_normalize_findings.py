@@ -88,6 +88,16 @@ class NormalizeFindingsTest(unittest.TestCase):
 				report_scan = normalizeEvidence(path_evidence)
 				self.assertEqual("failed", report_scan["scanners"][0]["state"])
 
+	def testNodeAdvisoriesPreferGhsaIdAndLockfileLocation(self):
+		result_scan = normalizeEvidence(self.makeEvidence("bun"))
+		finding_first = result_scan["findings"][0]
+
+		self.assertTrue(finding_first["id"].startswith("GHSA-"))
+		self.assertTrue(all(alias.isdigit() for alias in finding_first["aliases"]))
+		self.assertEqual("bun.lock", finding_first["location"])
+		result_pnpm = normalizeEvidence(self.makeEvidence("pnpm"))
+		self.assertEqual("pnpm-lock.yaml", result_pnpm["findings"][0]["location"])
+
 	def testNormalizesLegacySemgrepOwaspAndSeverity(self):
 		report_scan = normalizeEvidence(self.makeEvidence("semgrep"))
 		finding_scan = report_scan["findings"][0]

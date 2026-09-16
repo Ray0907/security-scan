@@ -118,9 +118,25 @@ def makeFinding(
 	return item_finding
 
 
+LOCKFILES_NODE = {
+	"npm": "package-lock.json",
+	"pnpm": "pnpm-lock.yaml",
+	"yarn": "yarn.lock",
+	"bun": "bun.lock",
+}
+
+
 def parseAdvisory(source: str, package: str, advisory: dict) -> dict:
 	identifier = advisory.get("id") or advisory.get("advisoryId") or advisory.get("cve")
 	url_advisory = advisory.get("url") or advisory.get("link")
+	aliases = list(advisory.get("cves") or [])
+	identifier_github = advisory.get("github_advisory_id") or (
+		getIdentifier(url_advisory) if url_advisory and "GHSA-" in url_advisory else None
+	)
+	if identifier_github and (not identifier or str(identifier).isdigit()):
+		if identifier:
+			aliases.append(str(identifier))
+		identifier = identifier_github
 	if not identifier:
 		identifier = getIdentifier(url_advisory)
 	fixed_versions = advisory.get("fix_versions") or []
@@ -130,8 +146,9 @@ def parseAdvisory(source: str, package: str, advisory: dict) -> dict:
 	return makeFinding(
 		source, identifier, "dependency", package=package,
 		fixed=fixed_versions, severity=advisory.get("severity"),
-		location="package-lock.json", summary=advisory.get("title") or advisory.get("summary"),
-		references=[url_advisory] if url_advisory else [], aliases=advisory.get("cves") or [],
+		location=LOCKFILES_NODE.get(source, "package-lock.json"),
+		summary=advisory.get("title") or advisory.get("summary"),
+		references=[url_advisory] if url_advisory else [], aliases=aliases,
 		cwe=advisory.get("cwe") or advisory.get("cwes") or [],
 	)
 
@@ -167,8 +184,6 @@ def parseYarn(content: str) -> list[dict]:
 		if not line.strip():
 			continue
 		data = json.loads(line)
-		if "_note" in data:
-			continue
 		if data.get("type") == "auditAdvisory":
 			found_shape = True
 			advisory = data["data"]["advisory"]
@@ -210,8 +225,6 @@ def parseGovulncheck(content: str) -> list[dict]:
 		if not line.strip():
 			continue
 		data = json.loads(line)
-		if "_note" in data:
-			continue
 		if "osv" in data:
 			found_shape = True
 			values_osv[data["osv"]["id"]] = data["osv"]

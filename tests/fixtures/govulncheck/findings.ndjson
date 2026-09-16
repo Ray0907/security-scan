@@ -1,3 +1,2 @@
-{"_note": "Derived from official documented output schema; representative optional fields may vary by tool version."}
 {"osv": {"id": "GO-2024-0001", "summary": "Example Go vulnerability", "aliases": ["CVE-2024-0004"], "database_specific": {"url": "https://pkg.go.dev/vuln/GO-2024-0001"}}}
 {"finding": {"osv": "GO-2024-0001", "fixed_version": "v1.2.3", "trace": [{"module": "example.com/demo", "package": "example.com/demo/pkg", "function": "Vulnerable", "position": {"filename": "main.go", "line": 12}}]}}
