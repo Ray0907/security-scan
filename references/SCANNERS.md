@@ -12,7 +12,8 @@ python3 scripts/scan_plan.py <project-root> [--exclude <relative-path>] --pretty
 
 The planner is read-only. It recursively detects projects, skips dependency and build directories,
 and emits one record per ecosystem. Repeat `--exclude` for user-requested paths relative to the scan
-root, using POSIX separators. Each record has a working directory, tool, command, and state:
+root, using POSIX separators. Plan schema v2 adds optional `fallback`, `note`, and `evidence`
+fields to scanner records. Each record has a working directory, tool, command, and state:
 
 - `ready`: run the exact argument list from the recorded working directory.
 - `needs-lockfile`: do not perform a non-reproducible audit; mark the project inconclusive.
@@ -33,14 +34,23 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 | Yarn 2+ | `yarn.lock` plus `packageManager` or `.yarnrc.yml` | `yarn npm audit --json --all --recursive` |
 | Yarn 1 | `yarn.lock` | `yarn audit --json` |
 | npm | `package-lock.json` or `npm-shrinkwrap.json` | `npm audit --json` |
+| Bun | `bun.lock` or `bun.lockb` | `bun audit --json` |
 | Python requirements | `requirements*.txt` | `pip-audit --format json -r <file>` |
 | Python locked project | `pylock.*.toml` | `pip-audit --format json --locked .` |
+| Lockfile fallback | uv, Poetry, Pipenv, Dart, Elixir, Swift, .NET, Deno | `osv-scanner scan source --lockfile <file> --format json` |
 | Go | `go.mod` | `govulncheck -json ./...` |
 | Rust | `Cargo.lock` | `cargo audit --json` |
 | PHP | `composer.lock` | `composer audit --locked --format=json` |
 | Ruby | `Gemfile.lock` | `bundle-audit check --format json` |
 | Java fallback | Maven or Gradle manifest | `trivy fs --format json --scanners vuln .` |
 | Container | `Dockerfile*` or `Containerfile*` | `trivy fs --format json --scanners misconfig .` |
+| Infrastructure as code | Terraform, Compose, or Kubernetes YAML | `trivy fs --format json --scanners misconfig .` |
+| Filesystem secrets | Repository root | `gitleaks dir . --redact --report-format json` |
+| GitHub Actions | `.github/workflows/*.yml` | `zizmor --format json --offline .github/workflows` |
+
+Schema v2 always includes one root-level gitleaks record. Planner exclusions do not apply inside
+gitleaks; use `.gitleaksignore` or tool configuration. Zizmor runs offline audits only, and IaC
+records list at most ten evidence filenames.
 
 Important limitations:
 

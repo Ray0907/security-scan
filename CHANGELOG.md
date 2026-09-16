@@ -7,6 +7,11 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Planned for 1.3.0
+
+- Bun planning, OSV-Scanner lockfile fallbacks, IaC detection, filesystem secret scanning, and
+  offline GitHub Actions audits in planner schema v2.
+
 ## [1.2.0] - 2026-09-16
 
 ### Added

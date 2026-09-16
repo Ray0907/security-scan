@@ -13,6 +13,7 @@ Record enough evidence to reproduce and interpret the result:
 - ruleset or advisory database identity and freshness when available;
 - failures, skipped tools, inconclusive projects, and manual-review gaps.
 
+Preserve planner schema v2 `fallback`, `note`, and `evidence` context when describing coverage.
 Use exactly these scanner states: `clean`, `findings`, `failed`, `skipped`, and `inconclusive`.
 `Clean` applies only to the named tool and recorded scope; it never means the application is secure.
 

@@ -45,7 +45,8 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
      [--exclude <relative-path>] --pretty
    ```
 
-3. For every `ready` project, run exactly its planned command from that project's directory.
+3. Review schema v2 `fallback`, `note`, and `evidence` fields, including root secrets and CI
+   records. For every `ready` project, run exactly its planned command from its project directory.
    Never chain package managers with `||`. Capture stdout, stderr, exit code, and tool version
    separately; a non-zero exit may mean findings rather than execution failure.
 4. Do not run planner records marked `inconclusive`; their command is null because project evidence

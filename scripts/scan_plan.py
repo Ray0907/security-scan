@@ -25,7 +25,7 @@ NAMES_SKIPPED = {
 
 IDENTIFIER_PRERELEASE = r"(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)"
 PATTERN_PACKAGE_MANAGER = re.compile(
-	r"(npm|pnpm|yarn)@((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+	r"(npm|pnpm|yarn|bun)@((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
 	rf"(?:-{IDENTIFIER_PRERELEASE}(?:\.{IDENTIFIER_PRERELEASE})*)?"
 	r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)"
 )
@@ -309,6 +309,8 @@ def getNodeProject(path_project: Path, names_file: set[str], path_root: Path) ->
 		managers_lockfile.add("yarn")
 	if {"package-lock.json", "npm-shrinkwrap.json"} & names_file:
 		managers_lockfile.add("npm")
+	if {"bun.lock", "bun.lockb"} & names_file:
+		managers_lockfile.add("bun")
 
 	if len(managers_lockfile) > 1:
 		return {
@@ -340,6 +342,7 @@ def getNodeProject(path_project: Path, names_file: set[str], path_root: Path) ->
 		"npm": ["npm", "audit", "--json"],
 		"pnpm": ["pnpm", "audit", "--json"],
 		"yarn": getYarnCommand(path_project, version_manager),
+		"bun": ["bun", "audit", "--json"],
 	}
 	patterns_workspace = (
 		getPnpmWorkspacePatterns(path_project)
@@ -355,59 +358,113 @@ def getNodeProject(path_project: Path, names_file: set[str], path_root: Path) ->
 	}
 
 
+def getOsvProject(kind_project: str, name_lockfile: str, path_project: Path, path_root: Path) -> dict:
+	return {
+		"kind": kind_project,
+		"path": getRelativePath(path_project, path_root),
+		"tool": "osv-scanner",
+		"status": "ready",
+		"command": [
+			"osv-scanner",
+			"scan",
+			"source",
+			"--lockfile",
+			name_lockfile,
+			"--format",
+			"json",
+		],
+		"fallback": True,
+	}
+
+
 def getPythonProject(path_project: Path, names_file: set[str], path_root: Path) -> dict:
 	data_base = {
 		"kind": "python",
 		"path": getRelativePath(path_project, path_root),
-		"tool": "pip-audit",
 		"status": "ready",
 	}
+	files_pylock = sorted(name for name in names_file if name.startswith("pylock."))
 	files_requirement = sorted(
 		name_file
 		for name_file in names_file
 		if name_file.startswith("requirements") and name_file.endswith(".txt")
 	)
-	if files_requirement:
+	files_fallback = [
+		name_file for name_file in ("uv.lock", "poetry.lock", "Pipfile.lock")
+		if name_file in names_file
+	]
+	if files_pylock:
+		project_python = {
+			**data_base,
+			"tool": "pip-audit",
+			"command": ["pip-audit", "--format", "json", "--locked", "."],
+		}
+		files_ignored = files_pylock[1:] + files_requirement + files_fallback
+	elif files_requirement:
 		command_scan = ["pip-audit", "--format", "json"]
 		for name_file in files_requirement:
 			command_scan.extend(["-r", name_file])
-		return {**data_base, "command": command_scan}
-	if any(name_file.startswith("pylock.") for name_file in names_file):
-		return {
-			**data_base,
-			"command": ["pip-audit", "--format", "json", "--locked", "."],
-		}
-	if "Pipfile.lock" in names_file:
-		return {
-			**data_base,
-			"status": "needs-export",
-			"command": None,
-			"reason": "Pipfile.lock must be exported to a requirements file before scanning",
-		}
-	if "pyproject.toml" in names_file:
-		reason_lockfile = "pyproject.toml exists without a supported lockfile"
-		if "uv.lock" in names_file:
-			reason_lockfile = (
-				"uv.lock is not supported by pip-audit; export with `uv export --format "
-				"requirements-txt --output-file requirements.txt` then rescan"
+		project_python = {**data_base, "tool": "pip-audit", "command": command_scan}
+		files_ignored = files_fallback
+	elif files_fallback:
+		name_lockfile = files_fallback[0]
+		project_python = getOsvProject("python", name_lockfile, path_project, path_root)
+		files_ignored = files_fallback[1:]
+		if name_lockfile == "uv.lock":
+			project_python["note"] = (
+				"pip-audit export alternative: `uv export --format requirements-txt "
+				"--output-file requirements.txt` then rescan"
 			)
-		elif "poetry.lock" in names_file:
-			reason_lockfile = (
-				"poetry.lock is not supported by pip-audit; export with `poetry export -f "
-				"requirements.txt --output requirements.txt` then rescan"
+		elif name_lockfile == "poetry.lock":
+			project_python["note"] = (
+				"pip-audit export alternative: `poetry export -f requirements.txt "
+				"--output requirements.txt` then rescan"
 			)
+		else:
+			project_python["note"] = (
+				"pip-audit alternative: export Pipfile.lock to requirements.txt then rescan"
+			)
+	else:
 		return {
 			**data_base,
-			"status": "needs-lockfile",
+			"tool": "pip-audit",
+			"status": "needs-lockfile" if "pyproject.toml" in names_file else "needs-export",
 			"command": None,
-			"reason": reason_lockfile,
+			"reason": (
+				"pyproject.toml exists without a supported lockfile"
+				if "pyproject.toml" in names_file
+				else "Python project does not include supported dependency evidence"
+			),
 		}
-	return {
-		**data_base,
-		"status": "needs-export",
-		"command": None,
-		"reason": "Python project does not include supported dependency evidence",
-	}
+	if files_ignored:
+		note_ignored = "ignored lower-priority evidence: " + ", ".join(files_ignored)
+		project_python["note"] = "; ".join(
+			part_note for part_note in (project_python.get("note"), note_ignored) if part_note
+		)
+	return project_python
+
+
+def getIacEvidence(path_project: Path, names_file: set[str]) -> list[str]:
+	names_evidence = []
+	for name_file in sorted(names_file):
+		if name_file.endswith(".tf") or re.fullmatch(
+			r"(?:docker-compose.*|compose)\.ya?ml",
+			name_file,
+		):
+			names_evidence.append(name_file)
+		elif name_file.endswith((".yml", ".yaml")):
+			try:
+				content_file = (path_project / name_file).read_bytes()[:4096].decode(
+					"utf-8", errors="ignore"
+				)
+			except OSError:
+				continue
+			lines_file = content_file.splitlines()
+			if any(line.startswith("apiVersion:") for line in lines_file) and any(
+				line.startswith("kind:") for line in lines_file
+			):
+				names_evidence.append(name_file)
+	return names_evidence[:10]
 
 
 def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> list[dict]:
@@ -416,7 +473,7 @@ def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> li
 		items_project.append(getNodeProject(path_project, names_file, path_root))
 	if (
 		"pyproject.toml" in names_file
-		or "Pipfile.lock" in names_file
+		or {"uv.lock", "poetry.lock", "Pipfile.lock"} & names_file
 		or any(name_file.startswith("pylock.") for name_file in names_file)
 		or any(
 			name_file.startswith("requirements") and name_file.endswith(".txt")
@@ -424,6 +481,17 @@ def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> li
 		)
 	):
 		items_project.append(getPythonProject(path_project, names_file, path_root))
+	for name_lockfile, kind_project in {
+		"pubspec.lock": "dart",
+		"mix.lock": "elixir",
+		"Package.resolved": "swift",
+		"packages.lock.json": "dotnet",
+		"deno.lock": "deno",
+	}.items():
+		if name_lockfile in names_file:
+			items_project.append(
+				getOsvProject(kind_project, name_lockfile, path_project, path_root)
+			)
 	if "go.mod" in names_file:
 		items_project.append(
 			{
@@ -487,27 +555,43 @@ def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> li
 				"command": ["trivy", "fs", "--format", "json", "--scanners", "vuln", "."],
 			}
 		)
+	names_iac = getIacEvidence(path_project, names_file)
 	if any(
 		name_file in ("Dockerfile", "Containerfile")
 		or name_file.startswith(("Dockerfile.", "Containerfile."))
 		for name_file in names_file
 	):
+		project_container = {
+			"kind": "container",
+			"path": getRelativePath(path_project, path_root),
+			"tool": "trivy",
+			"status": "ready",
+			"coverage": "misconfiguration-only",
+			"command": [
+				"trivy",
+				"fs",
+				"--format",
+				"json",
+				"--scanners",
+				"misconfig",
+				".",
+			],
+		}
+		if names_iac:
+			project_container["evidence"] = names_iac
+		items_project.append(project_container)
+	elif names_iac:
 		items_project.append(
 			{
-				"kind": "container",
+				"kind": "iac",
 				"path": getRelativePath(path_project, path_root),
 				"tool": "trivy",
 				"status": "ready",
 				"coverage": "misconfiguration-only",
 				"command": [
-					"trivy",
-					"fs",
-					"--format",
-					"json",
-					"--scanners",
-					"misconfig",
-					".",
+					"trivy", "fs", "--format", "json", "--scanners", "misconfig", "."
 				],
+				"evidence": names_iac,
 			}
 		)
 	return items_project
@@ -523,6 +607,7 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 	names_excluded = sorted({PurePosixPath(name).as_posix() for name in names_excluded or ()})
 	paths_excluded = tuple(PurePosixPath(name) for name in names_excluded)
 	items_project = []
+	has_ci_workflows = False
 
 	def isExcluded(path_project: Path) -> bool:
 		path_relative = PurePosixPath(getRelativePath(path_project, path_resolved))
@@ -541,7 +626,12 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 			for name_dir in names_dir
 			if name_dir not in NAMES_SKIPPED and not isExcluded(path_project / name_dir)
 		)
-		items_project.extend(getProjects(path_project, set(names_file), path_resolved))
+		set_names_file = set(names_file)
+		if getRelativePath(path_project, path_resolved) == ".github/workflows" and any(
+			name_file.endswith((".yml", ".yaml")) for name_file in names_file
+		):
+			has_ci_workflows = True
+		items_project.extend(getProjects(path_project, set_names_file, path_resolved))
 
 	parents_node_ready = [
 		item_project
@@ -587,9 +677,39 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 	]
 	for item_project in items_project:
 		item_project.pop("_workspace_patterns", None)
+	project_secrets = {
+		"kind": "secrets",
+		"path": ".",
+		"tool": "gitleaks",
+		"status": "ready",
+		"coverage": "filesystem-only",
+		"command": [
+			"gitleaks", "dir", ".", "--no-banner", "--redact", "--report-format", "json",
+			"--report-path", "/dev/stdout",
+		],
+	}
+	if names_excluded:
+		project_secrets["note"] = (
+			"gitleaks does not honor planner exclusions; configure .gitleaksignore or a "
+			"gitleaks config for those paths"
+		)
+	items_project.append(project_secrets)
+	if has_ci_workflows:
+		items_project.append(
+			{
+				"kind": "ci",
+				"path": ".",
+				"tool": "zizmor",
+				"status": "ready",
+				"coverage": "offline-audits-only",
+				"command": [
+					"zizmor", "--format", "json", "--offline", ".github/workflows"
+				],
+			}
+		)
 	items_project.sort(key=lambda item_project: (item_project["path"], item_project["kind"]))
 	return {
-		"schema_version": 1,
+		"schema_version": 2,
 		"root": str(path_resolved),
 		"excluded": names_excluded,
 		"projects": items_project,

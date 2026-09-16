@@ -115,14 +115,18 @@ A completed report records every scanner state explicitly:
 
 | Ecosystem | Primary evidence | Tool |
 | --- | --- | --- |
-| Node.js | pnpm, Yarn, or npm lockfile | Matching package manager audit |
+| Node.js | pnpm, Yarn, npm, or Bun lockfile | Matching package manager audit |
 | Python | Requirements or `pylock.*.toml` | `pip-audit` |
+| Fallback ecosystems | uv, Poetry, Pipenv, Dart, Elixir, Swift, .NET, Deno lockfile | OSV-Scanner |
 | Go | `go.mod` | `govulncheck` |
 | Rust | `Cargo.lock` | `cargo-audit` |
 | PHP | `composer.lock` | Composer audit |
 | Ruby | `Gemfile.lock` | `bundler-audit` |
 | Java | Maven or Gradle manifest | Trivy filesystem fallback |
 | Container | `Dockerfile*`, `Containerfile*` | Trivy misconfiguration scan |
+| Infrastructure as code | Terraform, Compose, Kubernetes YAML | Trivy misconfiguration scan |
+| Secrets | Repository filesystem | Gitleaks |
+| CI workflows | GitHub Actions YAML | Zizmor offline audits |
 
 A Dockerfile or Containerfile alone is not an image vulnerability inventory. Image scanning
 requires an existing image supplied by the user; this skill does not build untrusted repositories

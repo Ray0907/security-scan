@@ -100,7 +100,7 @@ class ScanPlanTest(unittest.TestCase):
 		self.assertIsNone(project_node["command"])
 
 	def testMarksUnsupportedPackageManagerAsInconclusive(self):
-		self.writeFile("package.json", '{"packageManager":"bun@1.2.3"}')
+		self.writeFile("package.json", '{"packageManager":"deno@1.2.3"}')
 
 		project_node = self.getProject(buildScanPlan(self.path_root), "node")
 
@@ -220,7 +220,7 @@ class ScanPlanTest(unittest.TestCase):
 		plan_scan = buildScanPlan(self.path_root)
 		paths_project = {item_project["path"] for item_project in plan_scan["projects"]}
 
-		self.assertEqual({"apps/web", "services/api"}, paths_project)
+		self.assertEqual({".", "apps/web", "services/api"}, paths_project)
 
 	def testExcludesRequestedPathsAndKeepsSibling(self):
 		self.writeFile("apps/ignored/package.json", "{}")
@@ -235,7 +235,10 @@ class ScanPlanTest(unittest.TestCase):
 		)
 
 		self.assertEqual(["apps/ignored", "generated/deep"], plan_scan["excluded"])
-		self.assertEqual(["apps/kept"], [item["path"] for item in plan_scan["projects"]])
+		self.assertEqual(
+			[".", "apps/kept"],
+			[item["path"] for item in plan_scan["projects"]],
+		)
 
 	def testReportsEmptyExclusionsByDefault(self):
 		self.assertEqual([], buildScanPlan(self.path_root)["excluded"])
@@ -584,30 +587,123 @@ class ScanPlanTest(unittest.TestCase):
 		self.assertEqual("needs-lockfile", project_python["status"])
 		self.assertIsNone(project_python["command"])
 
-	def testExplainsHowToExportUvLock(self):
+	def testUsesOsvScannerForUvLockAndKeepsExportNote(self):
 		self.writeFile("pyproject.toml")
 		self.writeFile("uv.lock")
 
 		project_python = self.getProject(buildScanPlan(self.path_root), "python")
 
-		self.assertEqual("needs-lockfile", project_python["status"])
-		self.assertEqual(
-			"uv.lock is not supported by pip-audit; export with `uv export --format "
-			"requirements-txt --output-file requirements.txt` then rescan",
-			project_python["reason"],
-		)
+		self.assertEqual("ready", project_python["status"])
+		self.assertEqual("osv-scanner", project_python["tool"])
+		self.assertTrue(project_python["fallback"])
+		self.assertIn("uv export --format requirements-txt", project_python["note"])
 
-	def testExplainsHowToExportPoetryLock(self):
+	def testUsesOsvScannerForPoetryLockAndKeepsExportNote(self):
 		self.writeFile("pyproject.toml")
 		self.writeFile("poetry.lock")
 
 		project_python = self.getProject(buildScanPlan(self.path_root), "python")
 
-		self.assertEqual("needs-lockfile", project_python["status"])
+		self.assertEqual("ready", project_python["status"])
+		self.assertEqual("osv-scanner", project_python["tool"])
 		self.assertIn(
 			"poetry export -f requirements.txt --output requirements.txt",
-			project_python["reason"],
+			project_python["note"],
 		)
+
+	def testPythonEvidencePriorityRecordsIgnoredLockfiles(self):
+		self.writeFile("pylock.toml")
+		self.writeFile("requirements.txt")
+		self.writeFile("uv.lock")
+
+		project_python = self.getProject(buildScanPlan(self.path_root), "python")
+
+		self.assertEqual(
+			["pip-audit", "--format", "json", "--locked", "."],
+			project_python["command"],
+		)
+		self.assertIn("requirements.txt", project_python["note"])
+		self.assertIn("uv.lock", project_python["note"])
+
+	def testSupportsBunLockfileAndPackageManager(self):
+		self.writeFile("package.json", '{"packageManager":"bun@1.2.3"}')
+		self.writeFile("bun.lock")
+
+		project_node = self.getProject(buildScanPlan(self.path_root), "node")
+
+		self.assertEqual("bun", project_node["tool"])
+		self.assertEqual(["bun", "audit", "--json"], project_node["command"])
+
+	def testUsesOsvScannerForUnsupportedLockfileEcosystems(self):
+		files_kind = {
+			"dart": "pubspec.lock",
+			"elixir": "mix.lock",
+			"swift": "Package.resolved",
+			"dotnet": "packages.lock.json",
+			"deno": "deno.lock",
+		}
+		for kind_project, name_file in files_kind.items():
+			self.writeFile(f"{kind_project}/{name_file}")
+
+		plan_scan = buildScanPlan(self.path_root)
+
+		for kind_project, name_file in files_kind.items():
+			with self.subTest(kind_project=kind_project):
+				project_scan = self.getProject(plan_scan, kind_project)
+				self.assertEqual("osv-scanner", project_scan["tool"])
+				self.assertTrue(project_scan["fallback"])
+				self.assertEqual(name_file, project_scan["command"][4])
+
+	def testDetectsIacEvidenceAndKubernetesContent(self):
+		self.writeFile("terraform/main.tf")
+		self.writeFile("compose/docker-compose.dev.yaml")
+		self.writeFile("k8s/deployment.yaml", "apiVersion: apps/v1\nkind: Deployment\n")
+		self.writeFile("not-k8s/config.yaml", "apiVersion: v1\nmetadata: {}\n")
+
+		projects_iac = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "iac"
+		]
+
+		self.assertEqual(
+			[("compose", ["docker-compose.dev.yaml"]), ("k8s", ["deployment.yaml"]),
+			 ("terraform", ["main.tf"])],
+			[(item["path"], item["evidence"]) for item in projects_iac],
+		)
+
+	def testMergesIacEvidenceIntoContainerRecord(self):
+		self.writeFile("service/Containerfile")
+		self.writeFile("service/compose.yml")
+
+		plan_scan = buildScanPlan(self.path_root)
+		project_container = self.getProject(plan_scan, "container")
+
+		self.assertEqual(["compose.yml"], project_container["evidence"])
+		self.assertFalse(any(item["kind"] == "iac" for item in plan_scan["projects"]))
+
+	def testAlwaysPlansOneRootSecretsScan(self):
+		plan_scan = buildScanPlan(self.path_root, ["fixtures"])
+		projects_secret = [
+			item for item in plan_scan["projects"] if item["kind"] == "secrets"
+		]
+
+		self.assertEqual(1, len(projects_secret))
+		self.assertEqual(".", projects_secret[0]["path"])
+		self.assertEqual("filesystem-only", projects_secret[0]["coverage"])
+		self.assertIn("does not honor planner exclusions", projects_secret[0]["note"])
+
+	def testPlansOfflineCiWorkflowAudit(self):
+		self.writeFile(".github/workflows/validate.yml", "name: Validate")
+
+		project_ci = self.getProject(buildScanPlan(self.path_root), "ci")
+
+		self.assertEqual("zizmor", project_ci["tool"])
+		self.assertEqual("offline-audits-only", project_ci["coverage"])
+		self.assertEqual(".", project_ci["path"])
+
+	def testUsesPlanSchemaVersionTwo(self):
+		self.assertEqual(2, buildScanPlan(self.path_root)["schema_version"])
 
 	def testCliOutputIsSerializable(self):
 		self.writeFile("Cargo.toml", "[package]\nname = 'crate'")
