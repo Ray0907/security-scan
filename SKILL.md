@@ -4,7 +4,7 @@ description: Use when a user asks to scan a repository for dependency vulnerabil
 license: MIT
 metadata:
   author: Ray Tien
-  version: "1.3.0"
+  version: "1.3.1"
 ---
 
 # Security Scan
@@ -49,7 +49,7 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
    records. Run ready records into a new evidence directory:
 
    ```bash
-   python3 <skill-root>/scripts/run_plan.py plan.json --out scan-evidence
+   python3 <skill-root>/scripts/run_plan.py plan.json --out scan-evidence [--semgrep]
    ```
 
    Never chain package managers with `||`; a non-zero exit may mean findings, not tool failure.
@@ -66,10 +66,11 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
    is ambiguous. Preserve the planner's reason and report the affected scope as incomplete. Mark
    `needs-lockfile`, `needs-export`, and missing-tool entries as `inconclusive` or `skipped`. Offer
    installation or preparation instructions, but do not perform them without approval.
-6. Unless code scanning was disabled, run:
+6. Unless code scanning was disabled, pass `--semgrep` to the evidence runner. It appends this
+   root-level command as a code-scanning evidence record:
 
    ```bash
-   semgrep scan --config p/owasp-top-ten --json --metrics=off <project-root>
+   semgrep scan --config p/owasp-top-ten --json --metrics=off .
    ```
 
    Parse the JSON even when the command exits non-zero. Treat Semgrep as pattern coverage, not

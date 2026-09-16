@@ -64,7 +64,7 @@ The local three-command pipeline is:
 
 ```bash
 python3 scripts/scan_plan.py . --pretty > plan.json
-python3 scripts/run_plan.py plan.json --out scan-evidence
+python3 scripts/run_plan.py plan.json --out scan-evidence --semgrep
 python3 scripts/normalize_findings.py scan-evidence --out security-findings.json
 ```
 
@@ -98,7 +98,7 @@ python3 scripts/scan_plan.py /work/app --exclude infra/legacy --pretty
       "status": "ready",
       "tool": "gitleaks",
       "coverage": "filesystem-only",
-      "command": ["gitleaks", "dir", ".", "--no-banner", "--redact", "--report-format", "json", "--report-path", "/dev/stdout"]
+      "command": ["gitleaks", "dir", ".", "--no-banner", "--redact", "--report-format", "json", "--report-path", "-"]
     },
     {
       "kind": "node",
@@ -134,19 +134,24 @@ normalized fields:
 
 ```json
 {
-  "id": "GHSA-xvch-5gv4-984h",
   "aliases": ["1097678"],
-  "source": "bun",
-  "type": "dependency",
-  "package": "minimist",
+  "confidence": "unknown",
+  "cwe": ["CWE-1321"],
+  "fingerprint": "26011568e34bedbe",
   "fixed_versions": [],
+  "id": "GHSA-xvch-5gv4-984h",
+  "installed_version": null,
+  "line": null,
+  "location": "bun.lock",
   "native_severity": "critical",
   "normalized_severity": "critical",
   "owasp_2025": ["A03"],
-  "cwe": ["CWE-1321"],
-  "location": "bun.lock",
+  "package": "minimist",
+  "references": ["https://github.com/advisories/GHSA-xvch-5gv4-984h"],
+  "rule_id": null,
+  "source": "bun",
   "summary": "Prototype Pollution in minimist",
-  "fingerprint": "26011568e34bedbe"
+  "type": "dependency"
 }
 ```
 

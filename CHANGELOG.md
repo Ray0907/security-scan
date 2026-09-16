@@ -7,6 +7,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-16
+
+### Fixed in 1.3.1
+
+- Verified all scanner parsers against real output and replaced synthetic fixtures with trimmed
+  real finding and clean runs.
+- Corrected govulncheck JSON-stream parsing, Composer and bundler-audit schemas, OSV severity and
+  fix extraction, package versions, and zizmor source locations.
+- Added runner-managed Semgrep evidence and corrected pip-audit and Gitleaks planner commands.
+
 ## [1.3.0] - 2026-09-16
 
 ### Added in 1.3.0
@@ -45,7 +55,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/Ray0907/security-scan/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Ray0907/security-scan/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Ray0907/security-scan/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Ray0907/security-scan/compare/v1.0.0...v1.1.0

@@ -35,7 +35,7 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 | Yarn 1 | `yarn.lock` | `yarn audit --json` |
 | npm | `package-lock.json` or `npm-shrinkwrap.json` | `npm audit --json` |
 | Bun | `bun.lock` or `bun.lockb` | `bun audit --json` |
-| Python requirements | `requirements*.txt` | `pip-audit --format json -r <file>` |
+| Python requirements | `requirements*.txt` | `pip-audit --format json --no-deps --disable-pip -r <file>` |
 | Python locked project | `pylock.*.toml` | `pip-audit --format json --locked .` |
 | Lockfile fallback | uv, Poetry, Pipenv, Dart, Elixir, Swift, .NET, Deno | `osv-scanner scan source --lockfile <file> --format json` |
 | Go | `go.mod` | `govulncheck -json ./...` |
@@ -45,7 +45,7 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 | Java fallback | Maven or Gradle manifest | `trivy fs --format json --scanners vuln .` |
 | Container | `Dockerfile*` or `Containerfile*` | `trivy fs --format json --scanners misconfig .` |
 | Infrastructure as code | Terraform, Compose, or Kubernetes YAML | `trivy fs --format json --scanners misconfig .` |
-| Filesystem secrets | Repository root | `gitleaks dir . --redact --report-format json` |
+| Filesystem secrets | Repository root | `gitleaks dir . --no-banner --redact --report-format json --report-path -` |
 | GitHub Actions | `.github/workflows/*.yml` | `zizmor --format json --offline .github/workflows` |
 
 Schema v2 always includes one root-level gitleaks record. Planner exclusions do not apply inside
@@ -57,7 +57,8 @@ Important limitations:
 - A bare `package.json`, `pyproject.toml`, or `Cargo.toml` is not a reproducible vulnerability
   inventory. Do not resolve and install an untrusted project merely to make it scannable.
 - `pip-audit` without a path or `-r` audits the ambient Python environment; never use that as the
-  project result.
+  project result. Requirements scans use `--no-deps --disable-pip`, so every audited dependency
+  must be explicitly pinned in the file; report omitted transitive pins as incomplete inventory.
 - `Pipfile.lock` is not directly supported by `pip-audit`. Ask the user to export a requirements
   file or use an explicitly approved fallback.
 - For `uv.lock`, ask the user to run
@@ -77,10 +78,11 @@ Important limitations:
 Execute a saved plan without a shell:
 
 ```bash
-python3 scripts/run_plan.py plan.json --out scan-evidence
+python3 scripts/run_plan.py plan.json --out scan-evidence [--semgrep]
 ```
 
-The runner writes `run.json` schema v1 with the plan root, timestamps, Git commit/branch/dirty
+`--semgrep` appends a root-level `p/owasp-top-ten` code scan to the saved plan records. The runner
+writes `run.json` schema v1 with the plan root, timestamps, Git commit/branch/dirty
 state, and one execution record per selected planner record. Each record includes command, working
 directory, tool version, exit code, duration, execution state, reason, and redaction count. Raw
 redacted evidence is stored as:
@@ -121,7 +123,29 @@ semgrep scan --config p/owasp-top-ten --json --metrics=off <project-root>
 ```
 
 Registry rules change over time. Record the Semgrep version, ruleset name, scan date, and rule IDs.
-Do not describe this ruleset as complete OWASP 2025 coverage.
+Do not describe this ruleset as complete OWASP 2025 coverage. Pass `--semgrep` to the evidence
+runner to execute and save this command with the other scanner records.
+
+## Verified Versions
+
+The real-output parser fixtures were captured on 2026-09-16.
+
+| Tool | Verified version | Command |
+| --- | --- | --- |
+| npm | 11.19.1 | `npm audit --json` |
+| pnpm | 10.30.3 | `pnpm audit --json` |
+| Yarn | 1.22.22 | `yarn audit --json` |
+| Bun | 1.3.11 | `bun audit --json` |
+| pip-audit | 2.10.1 | `pip-audit --format json --no-deps --disable-pip -r requirements.txt` |
+| govulncheck | 1.8.0 | `govulncheck -json ./...` |
+| cargo-audit | 0.22.2 | `cargo audit --json` |
+| Composer | 2.10.3 | `composer audit --locked --format=json` |
+| bundler-audit | 0.9.3 | `bundle-audit check --format json` |
+| Trivy | 0.74.0 | `trivy fs --format json --scanners misconfig .` |
+| OSV-Scanner | 2.6.0 | `osv-scanner scan source --lockfile uv.lock --format json` |
+| Semgrep | 1.176.0 | `semgrep scan --config p/owasp-top-ten --json --metrics=off .` |
+| Gitleaks | 8.30.1 | `gitleaks dir . --no-banner --redact --report-format json --report-path -` |
+| zizmor | 1.30.1 | `zizmor --format json --offline .github/workflows` |
 
 ## Missing Tools
 
