@@ -20,7 +20,15 @@ or failed scanners are reported as incomplete coverage, never as a clean result.
 
 ## Installation
 
-For Claude Code:
+With the [Skills CLI](https://skills.sh), which installs into any supported coding agent:
+
+```bash
+npx skills add Ray0907/security-scan
+# user-level instead of project-level
+npx skills add Ray0907/security-scan --global
+```
+
+For Claude Code without the CLI:
 
 ```bash
 git clone https://github.com/Ray0907/security-scan.git ~/.claude/skills/security-scan
