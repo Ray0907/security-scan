@@ -7,11 +7,15 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-16
+
 ### Added
 
 - Repeatable planner exclusions with `--exclude`.
 - Containerfile detection alongside Dockerfile detection.
 - Actionable export guidance for uv and Poetry lockfiles.
+- Installation and report examples plus a private vulnerability reporting policy.
+- Python 3.10, 3.12, and 3.13 CI coverage and weekly GitHub Actions dependency updates.
 
 ## [1.1.0] - 2026-08-22
 
@@ -28,6 +32,7 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Ray0907/security-scan/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Ray0907/security-scan/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Ray0907/security-scan/releases/tag/v1.0.0
