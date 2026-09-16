@@ -285,8 +285,8 @@ class NormalizeFindingsTest(unittest.TestCase):
 
 		for heading_verdict in ("Confirmed", "Needs validation", "Unreviewed", "Rejected"):
 			self.assertIn(f"## {heading_verdict}", content_markdown)
-		self.assertLess(content_markdown.index("## Unreviewed"), content_markdown.index("## OWASP"))
-		self.assertGreater(content_markdown.index("## Rejected"), content_markdown.index("## OWASP"))
+		self.assertLess(content_markdown.index("### Unreviewed"), content_markdown.index("## OWASP"))
+		self.assertGreater(content_markdown.index("### Rejected"), content_markdown.index("## OWASP"))
 		self.assertEqual("fail", kinds_sarif["finding-0"])
 		self.assertEqual("review", kinds_sarif["finding-1"])
 		self.assertEqual("review", kinds_sarif["finding-2"])

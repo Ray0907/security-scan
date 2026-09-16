@@ -710,7 +710,7 @@ def toMarkdown(data_report: dict) -> str:
 		("Unreviewed", None),
 	)
 	for heading_verdict, verdict in groups_verdict:
-		lines.extend(["", f"## {heading_verdict}", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
+		lines.extend(["", f"### {heading_verdict}", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
 		for finding in data_report["findings"]:
 			if finding.get("verdict") != verdict:
 				continue
@@ -720,7 +720,7 @@ def toMarkdown(data_report: dict) -> str:
 	lines.extend(["", "## OWASP 2025 Coverage", "", "| Category | State |", "| --- | --- |"])
 	for category, state in data_report["owasp_coverage"].items():
 		lines.append(f"| {category} | {state} |")
-	lines.extend(["", "## Rejected", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
+	lines.extend(["", "## Reviewed False Positives", "", "### Rejected", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
 	for finding in data_report["findings"]:
 		if finding.get("verdict") != "rejected":
 			continue
