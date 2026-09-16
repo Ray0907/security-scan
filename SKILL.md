@@ -4,7 +4,7 @@ description: Use when a user asks to scan a repository for dependency vulnerabil
 license: MIT
 metadata:
   author: Ray Tien
-  version: "1.3.1"
+  version: "1.4.0"
 ---
 
 # Security Scan

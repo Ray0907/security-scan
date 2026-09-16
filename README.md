@@ -150,8 +150,8 @@ python3 scripts/scan_plan.py /work/app --exclude infra/legacy --pretty
 }
 ```
 
-After `run_plan.py` and `normalize_findings.py`, each finding keeps its native identity and adds
-normalized fields:
+After normalization and review, each finding keeps its native identity and adds normalized fields
+and an evidence-backed verdict:
 
 ```json
 {
@@ -172,7 +172,15 @@ normalized fields:
   "rule_id": null,
   "source": "bun",
   "summary": "Prototype Pollution in minimist",
-  "type": "dependency"
+  "type": "dependency",
+  "verdict": "confirmed",
+  "verdict_evidence": {
+    "reason": "bun audit reports the locked minimist release in the vulnerable range and no fixed release is locked.",
+    "reviewed_at": "2026-09-16T00:00:00+00:00",
+    "reviewer": "security-reviewer",
+    "trace": "minimist -> bun.lock",
+    "unresolved_fact": null
+  }
 }
 ```
 
