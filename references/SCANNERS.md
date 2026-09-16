@@ -95,7 +95,9 @@ scan-evidence/
 ```
 
 Execution states are `ran`, `skipped`, and `failed`; finding classification remains a separate
-step. The runner refuses a non-empty evidence directory unless `--force` is explicit.
+step. The runner refuses a non-empty evidence directory unless `--force` is explicit. Normalize
+saved evidence with `scripts/normalize_findings.py`; malformed or empty output from a ran scanner
+is classified as `failed`, not clean.
 
 ## Classify Results
 

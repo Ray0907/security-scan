@@ -1,0 +1,35 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "lodash": {
+      "name": "lodash",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        {
+          "source": 1106913,
+          "name": "lodash",
+          "dependency": "lodash",
+          "title": "Command Injection in lodash",
+          "url": "https://github.com/advisories/GHSA-35jh-r3h4-6jhm",
+          "severity": "high",
+          "cwe": [
+            "CWE-77"
+          ],
+          "range": "<4.17.21"
+        }
+      ],
+      "effects": [],
+      "range": "<4.17.21",
+      "nodes": [
+        "node_modules/lodash"
+      ],
+      "fixAvailable": {
+        "name": "lodash",
+        "version": "4.17.21",
+        "isSemVerMajor": false
+      }
+    }
+  }
+}

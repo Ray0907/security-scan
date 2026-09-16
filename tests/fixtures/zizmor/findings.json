@@ -1,0 +1,24 @@
+[
+  {
+    "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+    "ident": "artipacked",
+    "description": "Credentials persisted in artifact",
+    "url": "https://docs.zizmor.sh/audits/artipacked/",
+    "determinations": {
+      "severity": "high",
+      "confidence": "high"
+    },
+    "locations": [
+      {
+        "symbolic": {
+          "key": "jobs.build.steps.0"
+        },
+        "concrete": {
+          "path": ".github/workflows/ci.yml",
+          "line": 8,
+          "column": 7
+        }
+      }
+    ]
+  }
+]

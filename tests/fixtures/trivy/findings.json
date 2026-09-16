@@ -1,0 +1,39 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "Results": [
+    {
+      "Target": "requirements.txt",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-0002",
+          "PkgName": "demo",
+          "InstalledVersion": "1.0",
+          "FixedVersion": "1.1",
+          "Severity": "HIGH",
+          "Title": "Demo vulnerability",
+          "PrimaryURL": "https://example.invalid/CVE-2024-0002",
+          "CweIDs": [
+            "CWE-20"
+          ]
+        }
+      ]
+    },
+    {
+      "Target": "main.tf",
+      "Misconfigurations": [
+        {
+          "ID": "AVD-AWS-0001",
+          "Title": "Public access enabled",
+          "Description": "Bucket is public",
+          "Message": "Public access is enabled",
+          "Severity": "MEDIUM",
+          "PrimaryURL": "https://example.invalid/AVD-AWS-0001",
+          "CauseMetadata": {
+            "Resource": "aws_s3_bucket.demo",
+            "StartLine": 4
+          }
+        }
+      ]
+    }
+  ]
+}

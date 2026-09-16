@@ -1,0 +1,22 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "dependencies": [
+    {
+      "name": "flask",
+      "version": "0.5",
+      "vulns": [
+        {
+          "id": "PYSEC-2019-179",
+          "fix_versions": [
+            "1.0"
+          ],
+          "aliases": [
+            "CVE-2019-1010083"
+          ],
+          "description": "Flask denial of service vulnerability"
+        }
+      ]
+    }
+  ],
+  "fixes": []
+}

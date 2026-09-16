@@ -1,0 +1,32 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.eval-detected",
+      "path": "app.py",
+      "start": {
+        "line": 3,
+        "col": 1
+      },
+      "end": {
+        "line": 3,
+        "col": 20
+      },
+      "extra": {
+        "message": "Use of eval on user input",
+        "severity": "ERROR",
+        "lines": "eval(user_input)",
+        "metadata": {
+          "owasp": [
+            "A03:2021 - Injection"
+          ],
+          "cwe": [
+            "CWE-95"
+          ],
+          "confidence": "HIGH"
+        }
+      }
+    }
+  ],
+  "errors": []
+}

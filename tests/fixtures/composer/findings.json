@@ -1,0 +1,17 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "advisories": {
+    "symfony/http-foundation": [
+      {
+        "advisoryId": "PKSA-test",
+        "packageName": "symfony/http-foundation",
+        "affectedVersions": "<5.4.46",
+        "title": "Improper input validation",
+        "cve": "CVE-2024-0001",
+        "link": "https://example.invalid/advisory",
+        "reportedAt": "2024-01-01T00:00:00+00:00",
+        "severity": "high"
+      }
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "results": [
+    {
+      "source": {
+        "path": "uv.lock",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "jinja2",
+            "version": "2.0",
+            "ecosystem": "PyPI"
+          },
+          "vulnerabilities": [
+            {
+              "id": "GHSA-test-test-test",
+              "aliases": [
+                "CVE-2024-0003"
+              ],
+              "summary": "Template vulnerability",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "7.5"
+                }
+              ]
+            }
+          ],
+          "groups": [
+            {
+              "ids": [
+                "GHSA-test-test-test"
+              ],
+              "aliases": [
+                "CVE-2024-0003"
+              ],
+              "max_severity": 7.5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

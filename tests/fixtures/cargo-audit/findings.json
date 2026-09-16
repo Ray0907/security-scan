@@ -1,0 +1,33 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "vulnerabilities": {
+    "found": true,
+    "count": 1,
+    "list": [
+      {
+        "advisory": {
+          "id": "RUSTSEC-2020-0071",
+          "package": "time",
+          "title": "Potential segfault in time",
+          "description": "Unsoundness in time crate",
+          "url": "https://rustsec.org/advisories/RUSTSEC-2020-0071",
+          "cvss": "7.5",
+          "categories": [
+            "memory-corruption"
+          ]
+        },
+        "versions": {
+          "patched": [
+            ">=0.2.23"
+          ],
+          "unaffected": []
+        },
+        "package": {
+          "name": "time",
+          "version": "0.1.44",
+          "source": "registry"
+        }
+      }
+    ]
+  }
+}

@@ -53,11 +53,17 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
    ```
 
    Never chain package managers with `||`; a non-zero exit may mean findings, not tool failure.
-4. Do not run planner records marked `inconclusive`; their command is null because project evidence
+4. Normalize the evidence before interpreting results:
+
+   ```bash
+   python3 <skill-root>/scripts/normalize_findings.py scan-evidence --out security-findings.json
+   ```
+
+5. Do not run planner records marked `inconclusive`; their command is null because project evidence
    is ambiguous. Preserve the planner's reason and report the affected scope as incomplete. Mark
    `needs-lockfile`, `needs-export`, and missing-tool entries as `inconclusive` or `skipped`. Offer
    installation or preparation instructions, but do not perform them without approval.
-5. Unless code scanning was disabled, run:
+6. Unless code scanning was disabled, run:
 
    ```bash
    semgrep scan --config p/owasp-top-ten --json --metrics=off <project-root>
@@ -65,12 +71,12 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
 
    Parse the JSON even when the command exits non-zero. Treat Semgrep as pattern coverage, not
    proof that all OWASP risks were tested.
-6. Read [the OWASP 2025 mapping](references/OWASP.md). Do not trust legacy 2017 or 2021 labels
+7. Read [the OWASP 2025 mapping](references/OWASP.md). Do not trust legacy 2017 or 2021 labels
    without translating them. Dependency findings map primarily to A03:2025.
-7. Enrich actual CVE identifiers only when useful. Batch up to 100 IDs with the NVD `cveIds`
+8. Enrich actual CVE identifiers only when useful. Batch up to 100 IDs with the NVD `cveIds`
    parameter, honor rate limits, and preserve the scanner result if enrichment fails. Do not
    invent CVEs for GHSA, RUSTSEC, PYSEC, or other advisory identifiers.
-8. Generate the result using [the reporting contract](references/REPORTING.md). Unless the user
+9. Generate the result using [the reporting contract](references/REPORTING.md). Unless the user
    requested files, summarize in chat. Never overwrite an existing report without confirmation.
 
 ## Completion Gate

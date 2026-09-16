@@ -1,0 +1,19 @@
+{
+  "_note": "Derived from official documented output schema; representative optional fields may vary by tool version.",
+  "results": [
+    {
+      "type": "unpatched_gem",
+      "gem": {
+        "name": "rack",
+        "version": "2.0.0"
+      },
+      "advisory": {
+        "id": "CVE-2020-8184",
+        "url": "https://rubysec.com/advisories/CVE-2020-8184",
+        "title": "Percent-encoded cookies can be used to overwrite existing prefixed cookie names",
+        "criticality": "High",
+        "solution": "upgrade to >= 2.2.3.1"
+      }
+    }
+  ]
+}

@@ -13,6 +13,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   offline GitHub Actions audits in planner schema v2.
 - A read-only plan runner with execution metadata, timeout and scope controls, and evidence
   redaction before persistence.
+- A fixture-tested findings normalizer with JSON, SARIF, and Markdown output, OWASP mapping,
+  severity normalization, stable fingerprints, and baseline diffs.
 
 ## [1.2.0] - 2026-09-16
 

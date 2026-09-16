@@ -44,7 +44,8 @@ category meaning, preserve the original metadata, and record that normalization 
 
 ## Mapping Rules
 
-- Map dependency advisories to A03 when they concern vulnerable components or supply-chain risk.
+- Map dependency advisories and Zizmor CI workflow findings to A03.
+- Map detected hardcoded credentials, including CWE-798 findings from Gitleaks, to A04.
 - Map code findings using verified CWE/category meaning. Do not infer from a bare `A03` string.
 - `JSON.parse(userInput)` is not insecure deserialization by itself. Require an unsafe object,
   type-confusion, gadget, or trust-boundary condition before reporting A08.

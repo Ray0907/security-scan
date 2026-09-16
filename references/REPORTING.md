@@ -39,8 +39,14 @@ Keep the native identifier and severity alongside normalized values:
 }
 ```
 
-For code findings, add the rule ID, file, line, CWE, confidence, and a redacted snippet. Do not
-invent a normalized severity when the scanner provides no defensible mapping; use `unknown`.
+For code findings, add the rule ID, file, line, CWE, confidence, and a redacted snippet. Every
+normalized finding also has a 16-character SHA-256 fingerprint of source, native ID, package,
+location, and line. Do not invent a normalized severity when the scanner provides no defensible
+mapping; use `unknown`.
+
+`scripts/normalize_findings.py` emits schema v1 JSON with scan metadata, scanner states, findings,
+fixed baseline entries, and A01-A10 coverage. Baselines match fingerprints: present fingerprints
+are `unchanged`, new fingerprints are `new`, and missing prior fingerprints are listed as `fixed`.
 
 ## Secret Redaction
 
