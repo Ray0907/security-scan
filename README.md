@@ -55,13 +55,48 @@ the skill will not claim `--auto-remind` is active until a supported hook or aut
 
 ## Example
 
-Running the planner on this repository produces:
+For a monorepo with a pnpm app, a Python API with a Dockerfile, and an unlocked Rust crate:
+
+```bash
+python3 scripts/scan_plan.py /work/app --exclude web/fixtures --pretty
+```
 
 ```json
 {
-  "excluded": [],
-  "projects": [],
-  "root": "/private/tmp/security-scan",
+  "excluded": ["web/fixtures"],
+  "projects": [
+    {
+      "kind": "rust",
+      "path": ".",
+      "status": "needs-lockfile",
+      "tool": "cargo-audit",
+      "command": null,
+      "reason": "Cargo.toml exists without Cargo.lock"
+    },
+    {
+      "kind": "container",
+      "path": "api",
+      "status": "ready",
+      "tool": "trivy",
+      "coverage": "misconfiguration-only",
+      "command": ["trivy", "fs", "--format", "json", "--scanners", "misconfig", "."]
+    },
+    {
+      "kind": "python",
+      "path": "api",
+      "status": "ready",
+      "tool": "pip-audit",
+      "command": ["pip-audit", "--format", "json", "-r", "requirements.txt"]
+    },
+    {
+      "kind": "node",
+      "path": "web",
+      "status": "ready",
+      "tool": "pnpm",
+      "command": ["pnpm", "audit", "--json"]
+    }
+  ],
+  "root": "/work/app",
   "schema_version": 1
 }
 ```
