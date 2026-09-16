@@ -7,11 +7,12 @@ Use this reference when planning or running dependency scanners.
 Run the bundled planner from the skill directory:
 
 ```bash
-python3 scripts/scan_plan.py <project-root> --pretty
+python3 scripts/scan_plan.py <project-root> [--exclude <relative-path>] --pretty
 ```
 
 The planner is read-only. It recursively detects projects, skips dependency and build directories,
-and emits one record per ecosystem. Each record has a working directory, tool, command, and state:
+and emits one record per ecosystem. Repeat `--exclude` for user-requested paths relative to the scan
+root, using POSIX separators. Each record has a working directory, tool, command, and state:
 
 - `ready`: run the exact argument list from the recorded working directory.
 - `needs-lockfile`: do not perform a non-reproducible audit; mark the project inconclusive.
@@ -39,7 +40,7 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 | PHP | `composer.lock` | `composer audit --locked --format=json` |
 | Ruby | `Gemfile.lock` | `bundle-audit check --format json` |
 | Java fallback | Maven or Gradle manifest | `trivy fs --format json --scanners vuln .` |
-| Dockerfile | `Dockerfile*` | `trivy fs --format json --scanners misconfig .` |
+| Container | `Dockerfile*` or `Containerfile*` | `trivy fs --format json --scanners misconfig .` |
 
 Important limitations:
 
@@ -49,7 +50,11 @@ Important limitations:
   project result.
 - `Pipfile.lock` is not directly supported by `pip-audit`. Ask the user to export a requirements
   file or use an explicitly approved fallback.
-- A Dockerfile scan checks configuration only. Do not claim image vulnerability coverage unless
+- For `uv.lock`, ask the user to run
+  `uv export --format requirements-txt --output-file requirements.txt`. For `poetry.lock`, ask for
+  `poetry export -f requirements.txt --output requirements.txt`, then rescan.
+- A Dockerfile or Containerfile scan checks configuration only. Do not claim image vulnerability
+  coverage unless
   the user supplies a built image and authorizes an image scan.
 - `govulncheck` may not provide a severity. Preserve `unknown`; never invent a CVSS value.
 - pnpm 11 reports GHSA identifiers from its registry endpoint. Do not relabel them as CVEs without

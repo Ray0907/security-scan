@@ -385,11 +385,22 @@ def getPythonProject(path_project: Path, names_file: set[str], path_root: Path) 
 			"reason": "Pipfile.lock must be exported to a requirements file before scanning",
 		}
 	if "pyproject.toml" in names_file:
+		reason_lockfile = "pyproject.toml exists without a supported lockfile"
+		if "uv.lock" in names_file:
+			reason_lockfile = (
+				"uv.lock is not supported by pip-audit; export with `uv export --format "
+				"requirements-txt --output-file requirements.txt` then rescan"
+			)
+		elif "poetry.lock" in names_file:
+			reason_lockfile = (
+				"poetry.lock is not supported by pip-audit; export with `poetry export -f "
+				"requirements.txt --output requirements.txt` then rescan"
+			)
 		return {
 			**data_base,
 			"status": "needs-lockfile",
 			"command": None,
-			"reason": "pyproject.toml exists without a supported lockfile",
+			"reason": reason_lockfile,
 		}
 	return {
 		**data_base,
@@ -477,7 +488,9 @@ def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> li
 			}
 		)
 	if any(
-		name_file == "Dockerfile" or name_file.startswith("Dockerfile.") for name_file in names_file
+		name_file in ("Dockerfile", "Containerfile")
+		or name_file.startswith(("Dockerfile.", "Containerfile."))
+		for name_file in names_file
 	):
 		items_project.append(
 			{
@@ -500,18 +513,34 @@ def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> li
 	return items_project
 
 
-def buildScanPlan(path_root: Path) -> dict:
+def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> dict:
 	path_resolved = path_root.resolve()
 	if not path_resolved.exists():
 		raise FileNotFoundError(f"scan root does not exist: {path_resolved}")
 	if not path_resolved.is_dir():
 		raise NotADirectoryError(f"scan root is not a directory: {path_resolved}")
 
+	names_excluded = sorted({PurePosixPath(name).as_posix() for name in names_excluded or ()})
+	paths_excluded = tuple(PurePosixPath(name) for name in names_excluded)
 	items_project = []
 
+	def isExcluded(path_project: Path) -> bool:
+		path_relative = PurePosixPath(getRelativePath(path_project, path_resolved))
+		return any(
+			path_relative == path_excluded or path_excluded in path_relative.parents
+			for path_excluded in paths_excluded
+		)
+
 	for name_root, names_dir, names_file in os.walk(path_resolved):
-		names_dir[:] = sorted(name_dir for name_dir in names_dir if name_dir not in NAMES_SKIPPED)
 		path_project = Path(name_root)
+		if isExcluded(path_project):
+			names_dir[:] = []
+			continue
+		names_dir[:] = sorted(
+			name_dir
+			for name_dir in names_dir
+			if name_dir not in NAMES_SKIPPED and not isExcluded(path_project / name_dir)
+		)
 		items_project.extend(getProjects(path_project, set(names_file), path_resolved))
 
 	parents_node_ready = [
@@ -562,6 +591,7 @@ def buildScanPlan(path_root: Path) -> dict:
 	return {
 		"schema_version": 1,
 		"root": str(path_resolved),
+		"excluded": names_excluded,
 		"projects": items_project,
 	}
 
@@ -571,6 +601,7 @@ def parseArguments() -> argparse.Namespace:
 		description="Build a read-only dependency scan plan for a repository.",
 	)
 	parser_scan.add_argument("path", nargs="?", default=".")
+	parser_scan.add_argument("--exclude", action="append", default=[])
 	parser_scan.add_argument("--pretty", action="store_true")
 	return parser_scan.parse_args()
 
@@ -578,7 +609,7 @@ def parseArguments() -> argparse.Namespace:
 def runMain() -> None:
 	args_scan = parseArguments()
 	try:
-		plan_scan = buildScanPlan(Path(args_scan.path))
+		plan_scan = buildScanPlan(Path(args_scan.path), args_scan.exclude)
 	except OSError as error_scan:
 		raise SystemExit(f"scan-plan: {error_scan}") from error_scan
 	indent_json = 2 if args_scan.pretty else None

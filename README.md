@@ -66,10 +66,11 @@ the skill will not claim `--auto-remind` is active until a supported hook or aut
 | PHP | `composer.lock` | Composer audit |
 | Ruby | `Gemfile.lock` | `bundler-audit` |
 | Java | Maven or Gradle manifest | Trivy filesystem fallback |
-| Dockerfile | `Dockerfile*` | Trivy misconfiguration scan |
+| Container | `Dockerfile*`, `Containerfile*` | Trivy misconfiguration scan |
 
-A Dockerfile alone is not an image vulnerability inventory. Image scanning requires an existing
-image supplied by the user; this skill does not build untrusted repositories during a scan.
+A Dockerfile or Containerfile alone is not an image vulnerability inventory. Image scanning
+requires an existing image supplied by the user; this skill does not build untrusted repositories
+during a scan.
 
 ## How It Works
 

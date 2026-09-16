@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.scan_plan import buildScanPlan
+from scripts.scan_plan import buildScanPlan, parseArguments
 
 
 class ScanPlanTest(unittest.TestCase):
@@ -221,6 +221,33 @@ class ScanPlanTest(unittest.TestCase):
 		paths_project = {item_project["path"] for item_project in plan_scan["projects"]}
 
 		self.assertEqual({"apps/web", "services/api"}, paths_project)
+
+	def testExcludesRequestedPathsAndKeepsSibling(self):
+		self.writeFile("apps/ignored/package.json", "{}")
+		self.writeFile("apps/ignored/package-lock.json")
+		self.writeFile("apps/kept/package.json", "{}")
+		self.writeFile("apps/kept/package-lock.json")
+		self.writeFile("generated/deep/ignored/go.mod", "module example.com/ignored")
+
+		plan_scan = buildScanPlan(
+			self.path_root,
+			["generated/deep", "apps/ignored"],
+		)
+
+		self.assertEqual(["apps/ignored", "generated/deep"], plan_scan["excluded"])
+		self.assertEqual(["apps/kept"], [item["path"] for item in plan_scan["projects"]])
+
+	def testReportsEmptyExclusionsByDefault(self):
+		self.assertEqual([], buildScanPlan(self.path_root)["excluded"])
+
+	def testCliAcceptsRepeatedExclusions(self):
+		with patch(
+			"sys.argv",
+			["scan_plan.py", ".", "--exclude", "vendor", "--exclude", "fixtures"],
+		):
+			args_scan = parseArguments()
+
+		self.assertEqual(["vendor", "fixtures"], args_scan.exclude)
 
 	def testKeepsNestedProjectNotDeclaredAsWorkspace(self):
 		self.writeFile("package.json", '{"name":"root"}')
@@ -557,6 +584,31 @@ class ScanPlanTest(unittest.TestCase):
 		self.assertEqual("needs-lockfile", project_python["status"])
 		self.assertIsNone(project_python["command"])
 
+	def testExplainsHowToExportUvLock(self):
+		self.writeFile("pyproject.toml")
+		self.writeFile("uv.lock")
+
+		project_python = self.getProject(buildScanPlan(self.path_root), "python")
+
+		self.assertEqual("needs-lockfile", project_python["status"])
+		self.assertEqual(
+			"uv.lock is not supported by pip-audit; export with `uv export --format "
+			"requirements-txt --output-file requirements.txt` then rescan",
+			project_python["reason"],
+		)
+
+	def testExplainsHowToExportPoetryLock(self):
+		self.writeFile("pyproject.toml")
+		self.writeFile("poetry.lock")
+
+		project_python = self.getProject(buildScanPlan(self.path_root), "python")
+
+		self.assertEqual("needs-lockfile", project_python["status"])
+		self.assertIn(
+			"poetry export -f requirements.txt --output requirements.txt",
+			project_python["reason"],
+		)
+
 	def testCliOutputIsSerializable(self):
 		self.writeFile("Cargo.toml", "[package]\nname = 'crate'")
 
@@ -596,6 +648,18 @@ class ScanPlanTest(unittest.TestCase):
 			project_container["command"],
 		)
 		self.assertEqual("misconfiguration-only", project_container["coverage"])
+
+	def testContainerfilesPlanMisconfigurationScans(self):
+		self.writeFile("base/Containerfile", "FROM alpine:3.22")
+		self.writeFile("variant/Containerfile.dev", "FROM alpine:3.22")
+
+		projects_container = [
+			item_project
+			for item_project in buildScanPlan(self.path_root)["projects"]
+			if item_project["kind"] == "container"
+		]
+
+		self.assertEqual(["base", "variant"], [item["path"] for item in projects_container])
 
 	def testRejectsMissingScanRoot(self):
 		path_missing = self.path_root / "missing"

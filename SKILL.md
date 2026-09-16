@@ -37,10 +37,12 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
 ## Workflow
 
 1. Record the repository path, Git commit, requested modes, scope, and exclusions.
-2. Read [the scanner contract](references/SCANNERS.md). Build the dependency plan with:
+2. Read [the scanner contract](references/SCANNERS.md). Build the dependency plan, repeating
+   `--exclude` for each user-requested relative path:
 
    ```bash
-   python3 <skill-root>/scripts/scan_plan.py <project-root> --pretty
+   python3 <skill-root>/scripts/scan_plan.py <project-root> \
+     [--exclude <relative-path>] --pretty
    ```
 
 3. For every `ready` project, run exactly its planned command from that project's directory.
