@@ -63,6 +63,13 @@ fixed baseline entries, and A01-A10 coverage:
 Baselines match fingerprints: present fingerprints are `unchanged`, new fingerprints are `new`,
 and missing prior fingerprints are listed as `fixed`.
 
+The complete JSON contract is [`schema/security-findings.schema.json`](../schema/security-findings.schema.json).
+The normalizer checks its own output. Validate a saved report independently with:
+
+```bash
+python3 scripts/validate_report.py security-findings.json
+```
+
 ## Finding Verdicts
 
 Verdicts are optional review decisions written after normalization, not scanner claims. Store them in
@@ -111,6 +118,8 @@ reported on stderr and in `verdicts_unmatched`.
 | Severity | `results[].level`: error, warning, or note |
 | Location and line | `artifactLocation.uri` and `region.startLine` |
 | Fingerprint | `partialFingerprints.primaryLocationLineHash` |
+| Verdict | `results[].kind`: confirmed → `fail`, needs validation/unreviewed → `review`, rejected → `notApplicable` |
+| Baseline change | `results[].baselineState`: `new` or `unchanged` |
 
 ## Secret Redaction
 
@@ -131,10 +140,11 @@ Use this order:
 1. Executive summary and severity counts.
 2. Scope and reproducibility metadata.
 3. Scanner status table, including failures and skipped coverage.
-4. Findings ordered by normalized severity, confidence, then stable identifier.
+4. Confirmed, Needs validation, and Unreviewed findings, each ordered by normalized severity,
+   confidence, then stable identifier.
 5. OWASP 2025 coverage table with automated and manual-review status.
 6. Prioritized remediation with fixed versions where verified.
-7. Reviewed false positives and accepted risks.
+7. Rejected findings, reviewed false positives, and accepted risks.
 8. Limitations and incomplete enrichment.
 
 When NVD data is included, add this notice:

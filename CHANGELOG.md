@@ -7,6 +7,16 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-16
+
+### Added in 1.4.0
+
+- Evidence-backed `confirmed`, `needs_validation`, and `rejected` finding verdicts with baseline
+  carry-forward, Markdown grouping, and SARIF review states.
+- Published schemas for findings reports, scan plans, and evidence runs, plus a stdlib validator and
+  automatic normalized-report validation.
+- Guidance for using deterministic scanner evidence before a complementary logic-level audit.
+
 ## [1.3.1] - 2026-09-16
 
 ### Fixed in 1.3.1
@@ -55,7 +65,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Ray0907/security-scan/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/Ray0907/security-scan/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Ray0907/security-scan/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Ray0907/security-scan/compare/v1.1.0...v1.2.0

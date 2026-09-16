@@ -12,6 +12,15 @@ into one OWASP Top 10:2025 mapped report with fingerprints, baseline diffs, and 
 
 See the [changelog](CHANGELOG.md) for release history.
 
+## When to use this skill
+
+- Use this skill for a deterministic scanner baseline with reproducible evidence and normalized
+  findings.
+- Use Cloudflare's complementary
+  [security-audit-skill](https://github.com/cloudflare/security-audit-skill) for a logic-level
+  source audit.
+- For both, run this skill first and provide `security-findings.json` to the audit as prior evidence.
+
 ## Safety Model
 
 Scanning is read-only by default. The skill does not install tools, update dependencies, execute
@@ -68,16 +77,20 @@ Scan this repository for security issues.
 `--deps-only` and `--code-only` are mutually exclusive. Persistent reminders are client-specific;
 the skill will not claim `--auto-remind` is active until a supported hook or automation is chosen.
 
-The local three-command pipeline is:
+The local pipeline is:
 
 ```bash
 python3 scripts/scan_plan.py . --pretty > plan.json
 python3 scripts/run_plan.py plan.json --out scan-evidence --semgrep
-python3 scripts/normalize_findings.py scan-evidence --out security-findings.json
+python3 scripts/normalize_findings.py scan-evidence --out security-findings.unreviewed.json
+# Review findings and write verdicts.json keyed by fingerprint.
+python3 scripts/normalize_findings.py scan-evidence --verdicts verdicts.json \
+  --out security-findings.json
+python3 scripts/validate_report.py security-findings.json
 ```
 
-Add `--baseline security-findings.json` on repeat scans, or `--format sarif` when preparing output
-for GitHub code scanning.
+Unreviewed code findings must remain labeled unreviewed. Add `--baseline security-findings.json` on
+repeat scans, or `--format sarif` when preparing output for GitHub code scanning.
 
 ## Example
 
@@ -201,9 +214,12 @@ during a scan.
 2. `scripts/run_plan.py` executes ready records without a shell and stores redacted evidence.
 3. `scripts/normalize_findings.py` parses scanner output, applies baselines and filters, and emits
    JSON, SARIF, or Markdown.
-4. Semgrep runs with `p/owasp-top-ten` and metrics disabled for code-pattern coverage.
-5. Findings retain native advisory IDs and are normalized to OWASP 2025 only when supported.
-6. Reports list every scanner as `clean`, `findings`, `failed`, `skipped`, or `inconclusive`.
+4. Review assigns `confirmed`, `needs_validation`, or `rejected` verdicts with evidence; omitted
+   verdicts remain unreviewed.
+5. The normalizer and `scripts/validate_report.py` enforce the published JSON report schema.
+6. Semgrep runs with `p/owasp-top-ten` and metrics disabled for code-pattern coverage.
+7. Findings retain native advisory IDs and are normalized to OWASP 2025 only when supported.
+8. Reports list every scanner as `clean`, `findings`, `failed`, `skipped`, or `inconclusive`.
 
 Detailed contracts:
 
@@ -233,16 +249,22 @@ security-scan/
 ├── .claude-plugin/plugin.json
 ├── .github/workflows/validate.yml
 ├── docs/                       # Design documents
+├── schema/
+│   ├── run.schema.json
+│   ├── scan-plan.schema.json
+│   └── security-findings.schema.json
 ├── scripts/
 │   ├── normalize_findings.py
 │   ├── redaction.py
 │   ├── run_plan.py
-│   └── scan_plan.py
+│   ├── scan_plan.py
+│   └── validate_report.py
 ├── tests/
 │   ├── fixtures/               # Minimal scanner output samples
 │   ├── test_normalize_findings.py
 │   ├── test_run_plan.py
-│   └── test_scan_plan.py
+│   ├── test_scan_plan.py
+│   └── test_validate_report.py
 ├── references/
 │   ├── OWASP.md
 │   ├── REPORTING.md

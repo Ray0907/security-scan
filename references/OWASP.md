@@ -63,4 +63,6 @@ For every category, report one of:
 - `not-scanned`: no applicable check ran.
 - `not-applicable`: supported by documented scope evidence, not assumption.
 
-A full scan should almost always retain manual-review work for A06, A07, A09, and A10.
+A category whose findings are all rejected reverts to `automated-covered`; rejected findings do not
+leave that category in the `findings` state. A full scan should almost always retain manual-review
+work for A06, A07, A09, and A10.
