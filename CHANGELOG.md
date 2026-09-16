@@ -7,7 +7,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Planned for 1.3.0
+## [1.3.0] - 2026-09-16
+
+### Added in 1.3.0
 
 - Bun planning, OSV-Scanner lockfile fallbacks, IaC detection, filesystem secret scanning, and
   offline GitHub Actions audits in planner schema v2.
@@ -43,7 +45,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Ray0907/security-scan/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Ray0907/security-scan/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Ray0907/security-scan/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Ray0907/security-scan/releases/tag/v1.0.0

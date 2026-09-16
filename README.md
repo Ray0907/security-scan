@@ -69,49 +69,51 @@ for GitHub code scanning.
 
 ## Example
 
-For a monorepo with a pnpm app, a Python API with a Dockerfile, and an unlocked Rust crate:
+Running the planner on this repository:
 
 ```bash
-python3 scripts/scan_plan.py /work/app --exclude web/fixtures --pretty
+python3 scripts/scan_plan.py . --pretty
 ```
 
 ```json
 {
-  "excluded": ["web/fixtures"],
+  "excluded": [],
   "projects": [
     {
-      "kind": "rust",
+      "command": [
+        "zizmor",
+        "--format",
+        "json",
+        "--offline",
+        ".github/workflows"
+      ],
+      "coverage": "offline-audits-only",
+      "kind": "ci",
       "path": ".",
-      "status": "needs-lockfile",
-      "tool": "cargo-audit",
-      "command": null,
-      "reason": "Cargo.toml exists without Cargo.lock"
+      "status": "ready",
+      "tool": "zizmor"
     },
     {
-      "kind": "container",
-      "path": "api",
+      "command": [
+        "gitleaks",
+        "dir",
+        ".",
+        "--no-banner",
+        "--redact",
+        "--report-format",
+        "json",
+        "--report-path",
+        "/dev/stdout"
+      ],
+      "coverage": "filesystem-only",
+      "kind": "secrets",
+      "path": ".",
       "status": "ready",
-      "tool": "trivy",
-      "coverage": "misconfiguration-only",
-      "command": ["trivy", "fs", "--format", "json", "--scanners", "misconfig", "."]
-    },
-    {
-      "kind": "python",
-      "path": "api",
-      "status": "ready",
-      "tool": "pip-audit",
-      "command": ["pip-audit", "--format", "json", "-r", "requirements.txt"]
-    },
-    {
-      "kind": "node",
-      "path": "web",
-      "status": "ready",
-      "tool": "pnpm",
-      "command": ["pnpm", "audit", "--json"]
+      "tool": "gitleaks"
     }
   ],
-  "root": "/work/app",
-  "schema_version": 1
+  "root": "/private/tmp/security-scan",
+  "schema_version": 2
 }
 ```
 
