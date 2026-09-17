@@ -1,0 +1,17 @@
+{
+  "version": "1.176.0",
+  "results": [
+    {
+      "check_id": "python.test.requires-login",
+      "path": "app.py",
+      "start": {"line": 1},
+      "extra": {
+        "severity": "ERROR",
+        "message": "Test finding",
+        "lines": "requires login",
+        "metadata": {}
+      }
+    }
+  ],
+  "errors": []
+}

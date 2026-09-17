@@ -124,7 +124,8 @@ semgrep scan --config p/owasp-top-ten --json --metrics=off <project-root>
 
 Registry rules change over time. Record the Semgrep version, ruleset name, scan date, and rule IDs.
 Do not describe this ruleset as complete OWASP 2025 coverage. Pass `--semgrep` to the evidence
-runner to execute and save this command with the other scanner records.
+runner to execute and save this command with the other scanner records. Without `semgrep login`,
+Semgrep may return `requires login` instead of source lines; reports record the snippet as omitted.
 
 ## Verified Versions
 

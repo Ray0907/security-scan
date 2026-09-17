@@ -225,15 +225,21 @@ def parseBun(content: str) -> list[dict]:
 
 def parsePipAudit(content: str) -> list[dict]:
 	data = json.loads(content)
-	return [
-		makeFinding(
-			"pip-audit", vuln["id"], "dependency", package=dependency.get("name"),
-			installed=dependency.get("version"), fixed=vuln.get("fix_versions"),
-			location="requirements.txt", summary=vuln.get("description"),
-			aliases=vuln.get("aliases"),
-		)
-		for dependency in data["dependencies"] for vuln in dependency.get("vulns", [])
-	]
+	items = []
+	for dependency in data["dependencies"]:
+		vulnerabilities = {}
+		for vulnerability in dependency.get("vulns", []):
+			vulnerabilities.setdefault(vulnerability["id"], vulnerability)
+		for vulnerability in vulnerabilities.values():
+			items.append(
+				makeFinding(
+					"pip-audit", vulnerability["id"], "dependency",
+					package=dependency.get("name"), installed=dependency.get("version"),
+					fixed=vulnerability.get("fix_versions"), location="requirements.txt",
+					summary=vulnerability.get("description"), aliases=vulnerability.get("aliases"),
+				)
+			)
+	return items
 
 
 def parseJsonStream(content: str) -> list[dict]:
@@ -428,12 +434,19 @@ def parseSemgrep(content: str) -> list[dict]:
 		if isinstance(values_owasp, str):
 			values_owasp = [values_owasp]
 		categories, ambiguous = normalizeSemgrepOwasp(values_owasp, values_cwe)
+		content_lines = extra.get("lines")
 		item = makeFinding(
 			"semgrep", result["check_id"], "code", severity=extra.get("severity"),
 			location=result.get("path"), summary=extra.get("message"), cwe=values_cwe,
 			rule_id=result["check_id"], line=result.get("start", {}).get("line"),
-			confidence=metadata.get("confidence"), snippet=extra.get("lines"), owasp=categories,
+			confidence=metadata.get("confidence"),
+			snippet=None if content_lines == "requires login" else content_lines,
+			owasp=categories,
 		)
+		if content_lines == "requires login":
+			item["snippet_omitted_reason"] = (
+				"unauthenticated Semgrep CLI does not return source snippets"
+			)
 		if ambiguous:
 			item["owasp_normalization"] = "ambiguous"
 		items.append(item)

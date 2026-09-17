@@ -12,6 +12,8 @@ from scripts.normalize_findings import (
 	normalizeEvidence,
 	parseArguments,
 	parseGovulncheck,
+	parsePipAudit,
+	parseSemgrep,
 	runMain,
 	toMarkdown,
 	toSarif,
@@ -108,6 +110,30 @@ class NormalizeFindingsTest(unittest.TestCase):
 		self.assertEqual("bun.lock", finding_first["location"])
 		result_pnpm = normalizeEvidence(self.makeEvidence("pnpm"))
 		self.assertEqual("pnpm-lock.yaml", result_pnpm["findings"][0]["location"])
+
+	def testPipAuditDeduplicatesVulnerabilityIdsPerDependency(self):
+		content_output = (
+			self.path_fixtures / "pip-audit" / "duplicates.json"
+		).read_text(encoding="utf-8")
+
+		findings = parsePipAudit(content_output)
+
+		self.assertEqual(1, len(findings))
+		self.assertEqual("PYSEC-2023-74", findings[0]["id"])
+		self.assertEqual("requests", findings[0]["package"])
+
+	def testSemgrepOmitsRequiresLoginPlaceholderSnippet(self):
+		content_output = (
+			self.path_fixtures / "semgrep" / "requires-login.json"
+		).read_text(encoding="utf-8")
+
+		finding = parseSemgrep(content_output)[0]
+
+		self.assertNotIn("snippet", finding)
+		self.assertEqual(
+			"unauthenticated Semgrep CLI does not return source snippets",
+			finding["snippet_omitted_reason"],
+		)
 
 	def testGovulncheckParsesPrettyStreamAndUsesFirstTraceFrame(self):
 		content_output = """

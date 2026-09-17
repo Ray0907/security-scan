@@ -1,0 +1,23 @@
+{
+  "dependencies": [
+    {
+      "name": "requests",
+      "version": "2.25.1",
+      "vulns": [
+        {
+          "id": "PYSEC-2023-74",
+          "fix_versions": ["2.31.0"],
+          "aliases": ["CVE-2023-32681"],
+          "description": "Proxy-Authorization header leak"
+        },
+        {
+          "id": "PYSEC-2023-74",
+          "fix_versions": ["2.31.0"],
+          "aliases": ["CVE-2023-32681"],
+          "description": "Proxy-Authorization header leak"
+        }
+      ]
+    }
+  ],
+  "fixes": []
+}
