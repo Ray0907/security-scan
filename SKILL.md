@@ -86,6 +86,23 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
 10. Generate the result using [the reporting contract](references/REPORTING.md). Unless the user
    requested files, summarize in chat. Never overwrite an existing report without confirmation.
 
+## Optional Jev Suggestions
+
+Only when the user explicitly requests TypeSafe Jev suggestions and approves transmitting the
+normalized finding context, offer this separate command:
+
+```bash
+TYPESAFE_API_KEY=... python3 <skill-root>/scripts/suggest_verdicts.py \
+  security-findings.json --out jev-suggestions.json
+```
+
+It requires the optional `typesafe-sdk` package; do not install it without approval. The command
+sends normalized metadata and the existing redacted snippet only, processes unreviewed Semgrep code
+findings, and does not read additional source files. Treat `jev-suggestions.json` as triage input,
+not `verdicts.json`: Jev's typed choice and confidence do not supply the technical evidence required
+by the reporting contract. A person or reviewing agent must verify and write that evidence before a
+verdict is merged.
+
 ## Completion Gate
 
 Report every scanner as `clean`, `findings`, `failed`, `skipped`, or `inconclusive`. Include tool

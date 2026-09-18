@@ -92,6 +92,24 @@ python3 scripts/validate_report.py security-findings.json
 Unreviewed code findings must remain labeled unreviewed. Add `--baseline security-findings.json` on
 repeat scans, or `--format sarif` when preparing output for GitHub code scanning.
 
+### Optional Jev verdict suggestions
+
+[TypeSafe Jev](https://docs.typesafe.ai/) can suggest `confirmed`, `needs_validation`, or
+`rejected` for unreviewed Semgrep findings that include a redacted snippet. Install its optional
+SDK yourself—the security scan never installs it automatically:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install typesafe-sdk
+TYPESAFE_API_KEY=... .venv/bin/python scripts/suggest_verdicts.py \
+  security-findings.unreviewed.json --out jev-suggestions.json
+```
+
+This explicit command sends normalized finding metadata and the existing redacted snippet to the
+TypeSafe API. It does not read additional source files. The separate output includes probabilities
+and model confidence, but it is not a `verdicts.json`: a human must verify the finding and supply the
+required `reason`, `trace`, or `unresolved_fact` before merging a verdict into the final report.
+
 ## Example
 
 A monorepo with a Bun app, an npm app, an `infra/` directory holding a Dockerfile and a Kubernetes
