@@ -15,6 +15,7 @@
 ### Task 1: Define suggestion behavior test-first
 
 **Files:**
+
 - Create: `tests/test_suggest_verdicts.py`
 - Create: `scripts/suggest_verdicts.py`
 
@@ -29,6 +30,7 @@
 ### Task 2: Add the optional CLI boundary
 
 **Files:**
+
 - Modify: `tests/test_suggest_verdicts.py`
 - Modify: `scripts/suggest_verdicts.py`
 
@@ -40,6 +42,7 @@
 ### Task 3: Document and verify
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `SKILL.md`
 
