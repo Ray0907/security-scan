@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.run_plan import getGitMetadata, parseArguments, runPlan
+from scripts.normalize_findings import normalizeEvidence
+from scripts.run_plan import getGitMetadata, getToolVersion, parseArguments, runPlan
 from scripts.validate_report import loadSchema, validateDocument
 
 
@@ -107,8 +108,9 @@ class RunPlanTest(unittest.TestCase):
 
 	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
 	@patch("scripts.run_plan.shutil.which", return_value=None)
-	def testOnlyAndSkipFilterKinds(self, _which, _git):
-		self.writePlan([self.project(), self.project("python", "pip-audit")])
+	@patch("scripts.run_plan.subprocess.run")
+	def testOnlyAndSkipRecordExcludedKinds(self, run_mock, _which, _git):
+		self.writePlan([self.project(), self.project("python", "pip-audit"), self.project("ci", "zizmor")])
 
 		runPlan(
 			self.path_plan,
@@ -118,7 +120,12 @@ class RunPlanTest(unittest.TestCase):
 			quiet=True,
 		)
 
-		self.assertEqual(["node"], [item["kind"] for item in self.readRun()["records"]])
+		records_run = self.readRun()["records"]
+		self.assertEqual(["node", "python", "ci"], [item["kind"] for item in records_run])
+		self.assertEqual(["tool unavailable", "excluded by --skip", "excluded by --only"], [item["reason"] for item in records_run])
+		self.assertEqual(["skipped"] * 3, [item["state"] for item in records_run])
+		self.assertEqual(["skipped"] * 3, [item["state"] for item in normalizeEvidence(self.path_out)["scanners"]])
+		run_mock.assert_not_called()
 
 	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
 	def testRunOutputMatchesPublishedSchema(self, _git):
@@ -136,8 +143,47 @@ class RunPlanTest(unittest.TestCase):
 		with self.assertRaisesRegex(ValueError, "non-empty"):
 			runPlan(self.path_plan, self.path_out, quiet=True)
 
+		(self.path_out / "run.json").write_text("{}", encoding="utf-8")
 		with patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None}):
 			self.assertEqual(0, runPlan(self.path_plan, self.path_out, force=True, quiet=True))
+		self.assertFalse((self.path_out / "existing").exists())
+
+	def testForceRefusesNonEvidenceDirectory(self):
+		self.writePlan([])
+		self.path_out.mkdir()
+		path_file = self.path_out / "existing"
+		path_file.write_text("keep", encoding="utf-8")
+
+		with self.assertRaisesRegex(ValueError, "refusing to remove non-evidence directory"):
+			runPlan(self.path_plan, self.path_out, force=True, quiet=True)
+		self.assertEqual("keep", path_file.read_text(encoding="utf-8"))
+
+	@patch("scripts.run_plan.subprocess.run")
+	def testToolVersionUsesSuppliedCommand(self, run_mock):
+		run_mock.return_value = subprocess.CompletedProcess([], 0, stdout="cargo-audit 0.22\n", stderr="")
+		self.assertEqual("cargo-audit 0.22", getToolVersion(["cargo", "audit", "--version"]))
+		run_mock.assert_called_once_with(
+			["cargo", "audit", "--version"], capture_output=True, text=True, timeout=30, check=False,
+		)
+
+	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
+	@patch("scripts.run_plan.getToolVersion", return_value="cargo-audit 0.22")
+	@patch("scripts.run_plan.shutil.which", return_value="/usr/bin/cargo")
+	@patch("scripts.run_plan.subprocess.run")
+	def testCargoAuditRecordsItsOwnVersion(self, run_mock, _which, version_mock, _git):
+		self.writePlan([self.project("rust", "cargo-audit"), self.project()])
+		projects_plan = json.loads(self.path_plan.read_text(encoding="utf-8"))
+		projects_plan["projects"][0]["command"] = ["cargo", "audit", "--json"]
+		self.path_plan.write_text(json.dumps(projects_plan), encoding="utf-8")
+		run_mock.return_value = subprocess.CompletedProcess([], 0, stdout="{}", stderr="")
+
+		runPlan(self.path_plan, self.path_out, quiet=True)
+
+		self.assertEqual("cargo-audit 0.22", self.readRun()["records"][0]["tool_version"])
+		self.assertEqual(
+			[(( ["cargo", "audit", "--version"],), {}), ((["npm", "--version"],), {})],
+			[(call.args, call.kwargs) for call in version_mock.call_args_list],
+		)
 
 	@patch("scripts.run_plan.subprocess.run")
 	def testReadsGitMetadata(self, run_mock):

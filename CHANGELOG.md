@@ -7,6 +7,11 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed in Unreleased
+
+- Findings in subdirectory projects now include the project path in their fingerprint. Existing
+  baselines and verdict files will report those findings as new once.
+
 ## [1.4.0] - 2026-09-16
 
 ### Added in 1.4.0

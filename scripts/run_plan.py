@@ -47,10 +47,10 @@ def getGitMetadata(path_root: Path) -> dict:
 	}
 
 
-def getToolVersion(name_tool: str) -> str | None:
+def getToolVersion(command_version: list[str]) -> str | None:
 	try:
 		result_version = subprocess.run(
-			[name_tool, "--version"],
+			command_version,
 			capture_output=True,
 			text=True,
 			timeout=30,
@@ -75,6 +75,8 @@ def prepareOutput(path_out: Path, force_output: bool) -> None:
 	if path_out.exists() and any(path_out.iterdir()):
 		if not force_output:
 			raise ValueError(f"output directory is non-empty: {path_out}; use --force")
+		if not (path_out / "run.json").is_file():
+			raise ValueError(f"refusing to remove non-evidence directory: {path_out}")
 		shutil.rmtree(path_out)
 	path_out.mkdir(parents=True, exist_ok=True)
 
@@ -122,8 +124,6 @@ def runPlan(
 		)
 
 	for index_plan, item_plan in enumerate(items_plan, start=1):
-		if set_only and item_plan["kind"] not in set_only or item_plan["kind"] in set_skip:
-			continue
 		path_cwd = path_root if item_plan["path"] == "." else path_root / item_plan["path"]
 		path_record = path_out / getRecordDirectory(index_plan, item_plan)
 		path_record.mkdir(parents=True)
@@ -138,7 +138,11 @@ def runPlan(
 		command_scan = item_plan.get("command")
 		version_tool = None
 
-		if item_plan.get("status") != "ready":
+		if set_only and item_plan["kind"] not in set_only:
+			reason_record = "excluded by --only"
+		elif item_plan["kind"] in set_skip:
+			reason_record = "excluded by --skip"
+		elif item_plan.get("status") != "ready":
 			reason_record = "planner " + item_plan.get("status", "inconclusive")
 			if item_plan.get("reason"):
 				reason_record += ": " + item_plan["reason"]
@@ -146,7 +150,10 @@ def runPlan(
 			reason_record = "tool unavailable"
 		else:
 			if name_tool not in versions_tool:
-				versions_tool[name_tool] = getToolVersion(command_scan[0])
+				versions_tool[name_tool] = getToolVersion(
+					["cargo", "audit", "--version"] if name_tool == "cargo-audit"
+					else [command_scan[0], "--version"]
+				)
 			version_tool = versions_tool[name_tool]
 			try:
 				result_scan = subprocess.run(

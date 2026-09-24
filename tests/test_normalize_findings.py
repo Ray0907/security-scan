@@ -101,6 +101,66 @@ class NormalizeFindingsTest(unittest.TestCase):
 				report_scan = normalizeEvidence(path_evidence)
 				self.assertEqual("failed", report_scan["scanners"][0]["state"])
 
+	def testSubdirectoryFindingsHaveUniqueProjectFingerprints(self):
+		path_evidence = self.makeEvidence("pip-audit")
+		path_first = next(path_evidence.glob("01-*/stdout.txt"))
+		path_second = path_evidence / "02-python-p2" / "stdout.txt"
+		path_second.parent.mkdir()
+		path_second.write_text(path_first.read_text(encoding="utf-8"), encoding="utf-8")
+		path_run = path_evidence / "run.json"
+		data_run = json.loads(path_run.read_text(encoding="utf-8"))
+		data_run["records"][0]["path"] = "p1"
+		data_run["records"].append({**data_run["records"][0], "plan_index": 2, "path": "p2"})
+		path_run.write_text(json.dumps(data_run), encoding="utf-8")
+
+		report_scan = normalizeEvidence(path_evidence)
+		findings = report_scan["findings"]
+		self.assertEqual(4, len(findings))
+		self.assertEqual(4, len({finding["fingerprint"] for finding in findings}))
+		self.assertEqual({"p1/requirements.txt", "p2/requirements.txt"}, {finding["location"] for finding in findings})
+
+	def testDuplicateFingerprintsKeepFirstFinding(self):
+		path_evidence = self.makeEvidence("pip-audit")
+		path_run = path_evidence / "run.json"
+		data_run = json.loads(path_run.read_text(encoding="utf-8"))
+		data_run["records"].append({**data_run["records"][0], "plan_index": 2})
+		path_second = path_evidence / "02-python-root" / "stdout.txt"
+		path_second.parent.mkdir()
+		content_first = next(path_evidence.glob("01-*/stdout.txt")).read_text(encoding="utf-8")
+		content_second = json.loads(content_first)
+		content_second["dependencies"][0]["vulns"][0]["description"] = "later duplicate"
+		path_second.write_text(json.dumps(content_second), encoding="utf-8")
+		path_run.write_text(json.dumps(data_run), encoding="utf-8")
+
+		findings = normalizeEvidence(path_evidence)["findings"]
+		self.assertEqual(2, len(findings))
+		self.assertEqual(2, len({finding["fingerprint"] for finding in findings}))
+		self.assertEqual(parsePipAudit(content_first)[0]["summary"], next(
+			finding["summary"] for finding in findings if finding["id"] == "PYSEC-2023-74"
+		))
+
+	def testGitleaksDuplicateFixtureYieldsOneFinding(self):
+		path_evidence = self.makeEvidence("gitleaks")
+		report_scan = normalizeEvidence(path_evidence)
+
+		self.assertEqual(1, len(report_scan["findings"]))
+		self.assertEqual("secrets/config.txt:private-key:2", report_scan["findings"][0]["id"])
+		self.assertEqual("findings", report_scan["scanners"][0]["state"])
+
+	def testAbsoluteFindingLocationRemainsUnchanged(self):
+		path_evidence = self.makeEvidence("semgrep")
+		path_run = path_evidence / "run.json"
+		data_run = json.loads(path_run.read_text(encoding="utf-8"))
+		data_run["records"][0]["path"] = "p1"
+		path_run.write_text(json.dumps(data_run), encoding="utf-8")
+		path_stdout = next(path_evidence.glob("01-*/stdout.txt"))
+		data_stdout = json.loads(path_stdout.read_text(encoding="utf-8"))
+		data_stdout["results"][0]["path"] = "/work/app/file.py"
+		path_stdout.write_text(json.dumps(data_stdout), encoding="utf-8")
+
+		finding = next(item for item in normalizeEvidence(path_evidence)["findings"] if item["location"] == "/work/app/file.py")
+		self.assertEqual(parseSemgrep(json.dumps(data_stdout))[0]["fingerprint"], finding["fingerprint"])
+
 	def testNodeAdvisoriesPreferGhsaIdAndLockfileLocation(self):
 		result_scan = normalizeEvidence(self.makeEvidence("bun"))
 		finding_first = result_scan["findings"][0]
@@ -301,6 +361,7 @@ class NormalizeFindingsTest(unittest.TestCase):
 			finding["change"] = "new" if index_finding == 0 else "unchanged"
 			if verdict:
 				finding["verdict"] = verdict
+				finding["verdict_evidence"] = {"reason": "Reviewed with trace", "trace": "input -> sink"}
 			findings.append(finding)
 		report_scan["findings"] = findings
 
@@ -313,10 +374,12 @@ class NormalizeFindingsTest(unittest.TestCase):
 			self.assertIn(f"## {heading_verdict}", content_markdown)
 		self.assertLess(content_markdown.index("### Unreviewed"), content_markdown.index("## OWASP"))
 		self.assertGreater(content_markdown.index("### Rejected"), content_markdown.index("## OWASP"))
-		self.assertEqual("fail", kinds_sarif["finding-0"])
-		self.assertEqual("review", kinds_sarif["finding-1"])
-		self.assertEqual("review", kinds_sarif["finding-2"])
-		self.assertEqual("notApplicable", kinds_sarif["finding-3"])
+		self.assertEqual({"fail"}, set(kinds_sarif.values()))
+		self.assertEqual(
+			[{"kind": "external", "status": "accepted", "justification": json.dumps(findings[3]["verdict_evidence"], sort_keys=True)}],
+			results_sarif[3]["suppressions"],
+		)
+		self.assertTrue(all(result["level"] in ("error", "warning", "note") for result in results_sarif))
 		self.assertEqual("new", results_sarif[0]["baselineState"])
 		self.assertEqual("unchanged", results_sarif[1]["baselineState"])
 
@@ -337,6 +400,18 @@ class NormalizeFindingsTest(unittest.TestCase):
 		self.assertIn("ruleId", data_sarif["runs"][0]["results"][0])
 		self.assertIn("physicalLocation", data_sarif["runs"][0]["results"][0]["locations"][0])
 
+	def testMarkdownEscapesSummaryInUnreviewedAndRejectedRows(self):
+		report_scan = normalizeEvidence(self.makeEvidence("npm"))
+		finding = report_scan["findings"][0]
+		finding["summary"] = "alpha | beta\nnext line"
+		rejected = deepcopy(finding)
+		rejected["verdict"] = "rejected"
+		report_scan["findings"] = [finding, rejected]
+
+		content_markdown = toMarkdown(report_scan)
+		self.assertEqual(2, content_markdown.count("alpha \\| beta next line"))
+		self.assertNotIn("alpha | beta\nnext line", content_markdown)
+
 	def testMarkdownUsesRequiredReportSections(self):
 		content_markdown = toMarkdown(normalizeEvidence(self.makeEvidence("npm")))
 
@@ -355,6 +430,15 @@ class NormalizeFindingsTest(unittest.TestCase):
 		)
 
 		self.assertEqual([], report_scan["findings"])
+
+	def testCoverageIncludesFindingsHiddenByFilters(self):
+		path_evidence = self.makeEvidence("pip-audit")
+		for filters_scan in ({"severities": {"high"}}, {"categories_owasp": {"A01"}}):
+			with self.subTest(filters=filters_scan):
+				report_scan = normalizeEvidence(path_evidence, **filters_scan)
+				self.assertEqual([], report_scan["findings"])
+				self.assertEqual(0, report_scan["scanners"][0]["finding_count"])
+				self.assertEqual("findings", report_scan["owasp_coverage"]["A03"])
 
 	def testNormalizerFailsWhenOwnReportViolatesSchema(self):
 		path_evidence = self.makeEvidence("npm")

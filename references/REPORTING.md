@@ -118,7 +118,7 @@ reported on stderr and in `verdicts_unmatched`.
 | Severity | `results[].level`: error, warning, or note |
 | Location and line | `artifactLocation.uri` and `region.startLine` |
 | Fingerprint | `partialFingerprints.primaryLocationLineHash` |
-| Verdict | `results[].kind`: confirmed → `fail`, needs validation/unreviewed → `review`, rejected → `notApplicable` |
+| Verdict | `results[].kind`: `fail` for all findings; rejected → `results[].suppressions[]` with external, accepted, and serialized verdict evidence as justification |
 | Baseline change | `results[].baselineState`: `new` or `unchanged` |
 
 ## Secret Redaction
