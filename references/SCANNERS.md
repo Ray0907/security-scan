@@ -78,8 +78,17 @@ Important limitations:
 Execute a saved plan without a shell:
 
 ```bash
-python3 scripts/run_plan.py plan.json --out scan-evidence [--semgrep]
+python3 scripts/run_plan.py plan.json --out scan-evidence [--semgrep] [--jobs N]
 ```
+
+`--jobs` runs distinct tools concurrently (default 1, sequential). Records that share the same
+tool always run one at a time in plan order, even with `--jobs` set higher. This is a precaution,
+not a confirmed fix for every version: Trivy documents that its default BoltDB cache uses file
+locks and multiple processes on the same cache directory are unsupported, and cargo-audit updates
+a local advisory-database clone. Concurrent `trivy fs --scanners misconfig` runs against the local
+policy cache did not reproduce a lock error in manual testing (Trivy 0.74.0), but the constraint
+stays because the failure mode is documented upstream and the cost of serializing same-tool records
+is low. `run.json` records stay in original plan order regardless of `--jobs`.
 
 `--semgrep` appends a root-level `p/owasp-top-ten` code scan to the saved plan records. The runner
 writes `run.json` schema v1 with the plan root, timestamps, Git commit/branch/dirty

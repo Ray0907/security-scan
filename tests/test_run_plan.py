@@ -2,6 +2,8 @@ import io
 import json
 import subprocess
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -204,7 +206,7 @@ class RunPlanTest(unittest.TestCase):
 			[
 				"run_plan.py", "-", "--out", "evidence", "--timeout", "5",
 				"--only", "node", "--skip", "ci", "--redact-pattern", "secret",
-				"--quiet", "--force", "--semgrep",
+				"--quiet", "--force", "--semgrep", "--jobs", "3",
 			],
 		):
 			args_run = parseArguments()
@@ -216,6 +218,79 @@ class RunPlanTest(unittest.TestCase):
 		self.assertTrue(args_run.quiet)
 		self.assertTrue(args_run.force)
 		self.assertTrue(args_run.semgrep)
+		self.assertEqual(3, args_run.jobs)
+
+	def testJobsDefaultsToOne(self):
+		with patch("sys.argv", ["run_plan.py", "-", "--out", "evidence"]):
+			args_run = parseArguments()
+		self.assertEqual(1, args_run.jobs)
+
+	def testJobsRejectsNonPositive(self):
+		with patch("sys.argv", ["run_plan.py", "-", "--out", "evidence", "--jobs", "0"]):
+			with self.assertRaises(SystemExit):
+				parseArguments()
+
+	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
+	@patch("scripts.run_plan.getToolVersion", return_value="tool 1")
+	@patch("scripts.run_plan.shutil.which", return_value="/usr/bin/tool")
+	def testDifferentToolsRunConcurrently(self, _which, _version, _git):
+		self.writePlan([self.project("node", "npm"), self.project("python", "pip-audit")])
+		barrier_tools = threading.Barrier(2, timeout=5)
+
+		def sideEffect(*_args, **_kwargs):
+			barrier_tools.wait()
+			return subprocess.CompletedProcess([], 0, stdout="{}", stderr="")
+
+		with patch("scripts.run_plan.subprocess.run", side_effect=sideEffect):
+			exit_code = runPlan(self.path_plan, self.path_out, quiet=True, jobs=2)
+
+		self.assertEqual(0, exit_code)
+		self.assertEqual(["ran", "ran"], [item["state"] for item in self.readRun()["records"]])
+
+	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
+	@patch("scripts.run_plan.getToolVersion", return_value="npm 11")
+	@patch("scripts.run_plan.shutil.which", return_value="/usr/bin/npm")
+	def testSameToolRecordsNeverOverlap(self, _which, _version, _git):
+		project_a = self.project("node", "npm")
+		project_a["path"] = "a"
+		project_b = self.project("node", "npm")
+		project_b["path"] = "b"
+		self.writePlan([project_a, project_b])
+		counter_active = {"value": 0, "max": 0}
+		lock_counter = threading.Lock()
+
+		def sideEffect(*_args, **_kwargs):
+			with lock_counter:
+				counter_active["value"] += 1
+				counter_active["max"] = max(counter_active["max"], counter_active["value"])
+			time.sleep(0.05)
+			with lock_counter:
+				counter_active["value"] -= 1
+			return subprocess.CompletedProcess([], 0, stdout="{}", stderr="")
+
+		with patch("scripts.run_plan.subprocess.run", side_effect=sideEffect):
+			runPlan(self.path_plan, self.path_out, quiet=True, jobs=4)
+
+		self.assertEqual(1, counter_active["max"])
+
+	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})
+	@patch("scripts.run_plan.getToolVersion", return_value="tool 1")
+	@patch("scripts.run_plan.shutil.which", return_value="/usr/bin/tool")
+	@patch("scripts.run_plan.subprocess.run")
+	def testJobsPreservesPlanOrderInOutput(self, run_mock, _which, _version, _git):
+		self.writePlan([
+			self.project("node", "npm"),
+			self.project("python", "pip-audit"),
+			self.project("rust", "cargo-audit"),
+		])
+		run_mock.return_value = subprocess.CompletedProcess([], 0, stdout="{}", stderr="")
+
+		runPlan(self.path_plan, self.path_out, quiet=True, jobs=3)
+
+		self.assertEqual(
+			["npm", "pip-audit", "cargo-audit"],
+			[item["tool"] for item in self.readRun()["records"]],
+		)
 
 
 if __name__ == "__main__":

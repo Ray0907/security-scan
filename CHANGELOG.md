@@ -7,6 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added in Unreleased
+
+- `run_plan.py --jobs N` runs scanners for distinct tools concurrently. Records sharing a tool
+  stay sequential as a precaution against cache/advisory-database lock conflicts (e.g. Trivy,
+  cargo-audit); see `references/SCANNERS.md` for what was and was not confirmed in testing.
+
 ### Changed in Unreleased
 
 - Findings in subdirectory projects now include the project path in their fingerprint. Existing
