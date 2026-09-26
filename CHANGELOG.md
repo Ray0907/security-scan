@@ -9,6 +9,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added in Unreleased
 
+- Read-only OSV license-compliance scans for Node, Python, and Rust lockfiles with SPDX-expression
+  severity classification, local-package provenance filtering, and explicit inconclusive coverage.
 - `run_plan.py --jobs N` runs scanners for distinct tools concurrently. Records sharing a tool
   stay sequential as a precaution against cache/advisory-database lock conflicts (e.g. Trivy,
   cargo-audit); see `references/SCANNERS.md` for what was and was not confirmed in testing.

@@ -148,6 +148,7 @@
             "type": "string",
             "enum": [
               "dependency",
+              "license",
               "misconfiguration",
               "code",
               "secret",

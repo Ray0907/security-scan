@@ -1,0 +1,42 @@
+{
+  "results": [
+    {
+      "source": {
+        "path": "requirements.txt",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "flask",
+            "version": "3.0.0",
+            "ecosystem": "PyPI"
+          },
+          "licenses": [
+            "non-standard"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "PYSEC-2026-2151"
+            }
+          ]
+        },
+        {
+          "package": {
+            "name": "requests",
+            "version": "2.31.0",
+            "ecosystem": "PyPI"
+          },
+          "licenses": [
+            "Apache-2.0"
+          ],
+          "vulnerabilities": [
+            {
+              "id": "PYSEC-2026-1872"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

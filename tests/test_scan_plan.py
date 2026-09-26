@@ -83,6 +83,9 @@ class ScanPlanTest(unittest.TestCase):
 		self.assertEqual("ready", project_node["status"])
 		self.assertEqual("npm", project_node["tool"])
 		self.assertEqual(["npm", "audit", "--json"], project_node["command"])
+		licenses = [item for item in buildScanPlan(self.path_root)["projects"]
+			if item["kind"] == "license"]
+		self.assertEqual(["npm-shrinkwrap.json"], [item["command"][4] for item in licenses])
 
 	def testAcceptsMatchingPackageManagerDeclaration(self):
 		self.writeFile("package.json", '{"packageManager":"yarn@4.1.0+sha512.abc"}')
@@ -243,7 +246,7 @@ class ScanPlanTest(unittest.TestCase):
 
 		self.assertEqual(["apps/ignored", "generated/deep"], plan_scan["excluded"])
 		self.assertEqual(
-			[".", "apps/kept"],
+			[".", "apps/kept", "apps/kept"],
 			[item["path"] for item in plan_scan["projects"]],
 		)
 
@@ -767,6 +770,53 @@ class ScanPlanTest(unittest.TestCase):
 		]
 
 		self.assertEqual(["base", "variant"], [item["path"] for item in projects_container])
+
+	def testPlansLicenseScansForSupportedLockfiles(self):
+		self.writeFile("node/package.json", '{}')
+		self.writeFile("node/package-lock.json", '{}')
+		self.writeFile("python/requirements.txt", "requests==2.31.0\n")
+		self.writeFile("rust/Cargo.toml", '[package]\nname = "rust"\n')
+		self.writeFile("rust/Cargo.lock", "")
+		licenses = [item for item in buildScanPlan(self.path_root)["projects"]
+			if item["kind"] == "license"]
+		self.assertEqual({"node", "python", "rust"}, {item["path"] for item in licenses})
+		for item in licenses:
+			self.assertEqual("osv-scanner-license", item["tool"])
+			self.assertEqual("ready", item["status"])
+			self.assertEqual(["osv-scanner", "scan", "source", "--lockfile"], item["command"][:4])
+			self.assertEqual(["--all-packages", "--no-resolve", "--licenses=", "--format", "json"],
+				item["command"][5:])
+		self.assertEqual([], validateDocument(buildScanPlan(self.path_root),
+			loadSchema(Path(__file__).parents[1] / "schema" / "scan-plan.schema.json")))
+
+	def testDoesNotSendSymlinkedLockfileToLicenseService(self):
+		self.writeFile("package.json", "{}")
+		with tempfile.TemporaryDirectory() as external:
+			lockfile = Path(external) / "package-lock.json"
+			lockfile.write_text("{}")
+			(self.path_root / "package-lock.json").symlink_to(lockfile)
+			license_item = next(item for item in buildScanPlan(self.path_root)["projects"]
+				if item["kind"] == "license")
+		self.assertEqual("inconclusive", license_item["status"])
+		self.assertIsNone(license_item["command"])
+
+	def testDoesNotQueryLocalPythonReferences(self):
+		self.writeFile("requirements.txt", "flask==3.0.0\n-e .\n")
+		license_item = next(item for item in buildScanPlan(self.path_root)["projects"]
+			if item["kind"] == "license")
+		self.assertEqual("inconclusive", license_item["status"])
+		self.assertIsNone(license_item["command"])
+		self.assertIn("license not scanned", license_item["reason"])
+
+	def testPlansUnsupportedAndMissingLicenseCoverage(self):
+		self.writeFile("go/go.mod", "module example.org/app\n")
+		self.writeFile("node/package.json", '{}')
+		licenses = [item for item in buildScanPlan(self.path_root)["projects"]
+			if item["kind"] == "license"]
+		self.assertEqual(2, len(licenses))
+		self.assertTrue(all(item["status"] != "ready" for item in licenses))
+		self.assertIn("license scanning not supported for this ecosystem",
+			next(item for item in licenses if item["path"] == "go")["reason"])
 
 	def testRejectsMissingScanRoot(self):
 		path_missing = self.path_root / "missing"

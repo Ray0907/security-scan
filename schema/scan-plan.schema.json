@@ -24,6 +24,7 @@
             "enum": [
               "node",
               "python",
+              "license",
               "dart",
               "elixir",
               "swift",

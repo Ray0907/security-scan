@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Use when a user asks to scan a repository for dependency vulnerabilities, insecure code patterns, CVEs, or OWASP Top 10 risks.
+description: Use when a user asks to scan a repository for dependency vulnerabilities, license compliance, insecure code patterns, CVEs, or OWASP Top 10 risks.
 license: MIT
 metadata:
   author: Ray Tien
@@ -14,7 +14,9 @@ Produce an evidence-backed security assessment without changing application code
 ## Boundaries
 
 - Treat scanning as read-only. Do not install tools, update advisory databases, build images,
-  run project scripts, or modify global client settings without explicit approval.
+  run project scripts, or modify global client settings without explicit approval. OSV license
+  lookup (like the existing OSV vulnerability fallback) queries deps.dev over the network;
+  it does not install or execute project dependencies.
 - Never report a clean scan when a tool failed, was missing, or could not cover the target.
 - Never copy secret values into chat or reports. Follow
   [the reporting and redaction contract](references/REPORTING.md).
@@ -22,10 +24,11 @@ Produce an evidence-backed security assessment without changing application code
 
 ## Interpret the Request
 
-Default to dependency and code scanning. Apply these modes before running tools:
+Default to dependency, license-compliance, and code scanning. Apply these modes before running
+tools:
 
-- `--deps-only`: skip Semgrep.
-- `--code-only`: skip dependency scanners.
+- `--deps-only`: include license records; skip Semgrep.
+- `--code-only`: skip dependency and license scanners.
 - `--owasp A01` through `A10`: retain only findings mapped to that 2025 category.
 - `--severity critical,high`: filter after normalizing scanner output.
 - `--export-bypass`: read the reporting reference and export reviewed false positives only.
@@ -60,8 +63,9 @@ Reject incompatible `--deps-only` and `--code-only` requests instead of guessing
    ```
 
    For repeat scans, pass `--baseline security-findings.json`. Use `--format sarif` for a GitHub
-   code-scanning upload. Read every normalized scanner state and reason; normalization does not
-   replace the completion gate for `failed`, `skipped`, or `inconclusive` coverage.
+   code-scanning upload. Keep the original lockfiles available for license provenance filtering.
+   Read every normalized scanner state and reason; normalization does not replace the completion
+   gate for `failed`, `skipped`, or `inconclusive` coverage.
 5. Review every code finding at its flagged lines. Assign a verdict and evidence as defined in
    [the reporting contract](references/REPORTING.md), write `verdicts.json`, then rerun with
    `--verdicts verdicts.json`. If this review is skipped, label those findings unreviewed.

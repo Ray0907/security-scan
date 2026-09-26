@@ -37,6 +37,7 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 | Bun | `bun.lock` or `bun.lockb` | `bun audit --json` |
 | Python requirements | `requirements*.txt` | `pip-audit --format json --no-deps --disable-pip -r <file>` |
 | Python locked project | `pylock.*.toml` | `pip-audit --format json --locked .` |
+| Node/Python/Rust licenses | detected lockfile | `osv-scanner scan source --lockfile <file> --all-packages --no-resolve --licenses= --format json` (`osv-scanner-license` record) |
 | Lockfile fallback | uv, Poetry, Pipenv, Dart, Elixir, Swift, .NET, Deno | `osv-scanner scan source --lockfile <file> --format json` |
 | Go | `go.mod` | `govulncheck -json ./...` |
 | Rust | `Cargo.lock` | `cargo audit --json` |
@@ -72,6 +73,22 @@ Important limitations:
   a verified alias.
 - `bundler-audit` depends on a local advisory database. Record its freshness; ask before updating
   it, and mark stale or missing data as inconclusive.
+- License lookup uses **deps.dev over the network**; `--offline` cannot retrieve licenses (exit 127).
+  This is the same network dependency as the existing OSV vulnerability fallback, not an offline
+  audit. `--no-resolve` limits Python to explicitly pinned requirements; `--licenses=` disables
+  OSV's allowlist verdict; `--all-packages` returns permissive packages too. A license lookup
+  failure is inconclusive, never clean; vulnerability-only exit 1 with valid license JSON is not
+  a license failure. License findings do not map to OWASP 2025.
+- OSV's license JSON omits provenance and may falsely assign a public package's license to a
+  same-named local/workspace package. Normalization re-reads the original lockfile: only registry
+  `source` entries in Cargo.lock, registry-tarball `resolved` entries in npm package-locks, and
+  pinned `name==version` requirements are trusted. Local or unpinned entries are not reported as
+  licensed; requirements with unpinned or path/git references are not sent to OSV at planning time.
+  Coverage is inconclusive. Keep the original lockfile unchanged and available through
+  normalization; it is not copied into evidence. If unavailable, do not claim clean coverage. Other Node/Python lockfile
+  formats currently lack a safe local-package provenance filter and remain inconclusive, even if
+  the scanner runs; symlinked lockfiles are not sent to OSV. Other ecosystems are explicitly marked
+  unsupported.
 
 ## Evidence Runner
 

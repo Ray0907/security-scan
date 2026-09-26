@@ -1,0 +1,42 @@
+{
+  "results": [
+    {
+      "source": {
+        "path": "Cargo.lock",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "proc-macro2",
+            "version": "1.0.107",
+            "ecosystem": "crates.io"
+          },
+          "licenses": [
+            "Apache-2.0 OR MIT"
+          ]
+        },
+        {
+          "package": {
+            "name": "rust-app",
+            "version": "0.1.0",
+            "ecosystem": "crates.io"
+          },
+          "licenses": [
+            "MIT"
+          ]
+        },
+        {
+          "package": {
+            "name": "unicode-ident",
+            "version": "1.0.26",
+            "ecosystem": "crates.io"
+          },
+          "licenses": [
+            "Unicode-3.0 AND (Apache-2.0 OR MIT)"
+          ]
+        }
+      ]
+    }
+  ]
+}

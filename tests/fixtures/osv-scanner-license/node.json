@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "source": {
+        "path": "package-lock.json",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "balanced-match",
+            "version": "1.0.2",
+            "ecosystem": "npm"
+          },
+          "licenses": [
+            "MIT"
+          ]
+        },
+        {
+          "package": {
+            "name": "glob",
+            "version": "7.2.3",
+            "ecosystem": "npm"
+          },
+          "licenses": [
+            "ISC"
+          ]
+        }
+      ]
+    }
+  ]
+}
