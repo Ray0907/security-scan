@@ -20,6 +20,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Findings in subdirectory projects now include the project path in their fingerprint. Existing
   baselines and verdict files will report those findings as new once.
 
+### Removed in Unreleased
+
+- Optional TypeSafe Jev verdict suggestions (`suggest_verdicts.py`). Reviewing agents already
+  verify each finding with evidence, so snippet-only suggestions added an external dependency and
+  code transmission without replacing that review.
+
 ## [1.4.0] - 2026-09-16
 
 ### Added in 1.4.0
