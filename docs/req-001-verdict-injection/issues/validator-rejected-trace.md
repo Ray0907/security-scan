@@ -21,10 +21,13 @@ cannot hide a finding.
   `/findings/<index>/verdict_evidence/trace: rejected verdict requires a file:line reference`.
 - Exit code 1 when schema errors or semantic errors exist; 0 otherwise; 2 unchanged for unreadable
   input. Schema errors and semantic errors are both printed when both exist.
-- Keep `validateDocument` a generic schema validator; put the new check in its own function (for
-  example `validateVerdicts(document) -> list[str]`) called from `runMain`. If the document is not
-  an object or `findings` is not a list, the semantic check returns no errors (schema errors already
-  cover that).
+- Keep `validateDocument` a generic schema validator. Put the rule in a new shared module
+  `scripts/verdict_rules.py` exposing `validateVerdicts(document) -> list[str]` (regex at module
+  level). Import it in `validate_report.py` with the same `try: from scripts.verdict_rules ...
+  except ImportError: from verdict_rules ...` pattern that `normalize_findings.py` uses for
+  `redaction`, and call it from `runMain`. If the document is not an object or `findings` is not
+  a list, `validateVerdicts` returns no errors (schema errors already cover that). The SARIF
+  feature reuses this module; do not wire it into `normalize_findings.py` here.
 - Tests in `tests/test_validate_report.py`:
   - Unit-level: rejected with trace null, `""`, `"   "`, `"looks safe"`, `"10:30"`, missing
     `verdict_evidence`, and carried-forward rejected with trace null each produce exactly the
@@ -49,6 +52,5 @@ cannot hide a finding.
 
 - Opening the scanned repository to check whether cited lines are comments (no `--root` option).
 - Changing `schema/security-findings.schema.json` or adding fields such as `control`.
-- Changing `normalize_findings.py` behavior; it may still merge weak verdicts, the validator is
-  the gate.
+- Changing `normalize_findings.py` behavior (the SARIF gate is the sarif-rejected-gate feature).
 - Any edit to `SKILL.md`, `references/`, or `CHANGELOG.md` (separate feature).
