@@ -6,6 +6,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+	from scripts.verdict_rules import validateVerdicts
+except ImportError:
+	from verdict_rules import validateVerdicts
+
 
 TYPE_CHECKS = {
 	"array": lambda value: isinstance(value, list),
@@ -84,6 +89,7 @@ def runMain() -> int:
 		print(f"validate-report: {error_validate}", file=sys.stderr)
 		return 2
 	errors = validateDocument(document, schema)
+	errors.extend(validateVerdicts(document))
 	for error_validate in errors:
 		print(error_validate, file=sys.stderr)
 	return 1 if errors else 0

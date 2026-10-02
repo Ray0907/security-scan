@@ -1,3 +1,3 @@
-- [ ] issues/validator-rejected-trace.md
-- [ ] issues/sarif-rejected-gate.md
-- [ ] issues/skill-untrusted-content.md
+- [x] issues/validator-rejected-trace.md
+- [x] issues/sarif-rejected-gate.md
+- [x] issues/skill-untrusted-content.md

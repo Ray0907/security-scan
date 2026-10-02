@@ -12,9 +12,11 @@ from pathlib import Path
 try:
 	from scripts.redaction import redactText
 	from scripts.validate_report import loadSchema, validateDocument
+	from scripts.verdict_rules import validateVerdicts
 except ModuleNotFoundError:
 	from redaction import redactText
 	from validate_report import loadSchema, validateDocument
+	from verdict_rules import validateVerdicts
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4, "unknown": 5}
 CONFIDENCE_ORDER = {"high": 0, "medium": 1, "low": 2, "unknown": 3}
@@ -961,6 +963,11 @@ def runMain() -> None:
 		print(f"normalize-findings: {error_output}", file=sys.stderr)
 		raise SystemExit(1) from error_output
 	if args_output.format == "sarif":
+		errors_verdict = validateVerdicts(data_report)
+		if errors_verdict:
+			for error_verdict in errors_verdict:
+				print(error_verdict, file=sys.stderr)
+			raise SystemExit(1)
 		content_output = json.dumps(toSarif(data_report), indent=2, sort_keys=True) + "\n"
 	elif args_output.format == "markdown":
 		content_output = toMarkdown(data_report)

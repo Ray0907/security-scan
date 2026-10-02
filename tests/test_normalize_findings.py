@@ -1,5 +1,7 @@
 import io
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr
@@ -84,6 +86,103 @@ class NormalizeFindingsTest(unittest.TestCase):
 			encoding="utf-8",
 		)
 		return path_evidence
+
+	def makeRejectedEvidence(self, valid_trace: bool = False) -> tuple[Path, Path, dict]:
+		path_evidence = self.makeEvidence("semgrep")
+		data_report = normalizeEvidence(path_evidence)
+		data_finding = data_report["findings"][0]
+		data_verdict = {
+			"verdict": "rejected",
+			"verdict_evidence": {
+				"reason": "Comment claims verified false positive.",
+				"trace": (
+					f"{data_finding['location']}:{data_finding['line']}" if valid_trace else None
+				),
+				"unresolved_fact": None,
+				"reviewed_at": "2026-09-16T00:00:00+00:00",
+				"reviewer": "security-reviewer",
+			},
+		}
+		path_verdicts = self.path_root / "verdicts.json"
+		path_verdicts.write_text(
+			json.dumps({data_finding["fingerprint"]: data_verdict}), encoding="utf-8",
+		)
+		data_finding.update(data_verdict)
+		return path_evidence, path_verdicts, data_report
+
+	def testCliSarifRejectsWeakVerdictWithoutWritingOutput(self):
+		path_evidence, path_verdicts, _ = self.makeRejectedEvidence()
+		path_script = Path(__file__).parents[1] / "scripts/normalize_findings.py"
+		for mode_output in ("stdout", "missing", "existing"):
+			with self.subTest(output=mode_output):
+				path_output = self.path_root / f"{mode_output}.sarif"
+				if mode_output == "existing":
+					path_output.write_bytes(b"previous SARIF\n")
+				args_output = [] if mode_output == "stdout" else ["--out", str(path_output)]
+				result_cli = subprocess.run(
+					[sys.executable, str(path_script), str(path_evidence),
+						"--verdicts", str(path_verdicts), "--format", "sarif", *args_output],
+					capture_output=True, text=True, check=False,
+				)
+				self.assertEqual(1, result_cli.returncode, result_cli.stderr)
+				self.assertEqual("", result_cli.stdout)
+				self.assertEqual(
+					"/findings/0/verdict_evidence/trace: "
+					"rejected verdict requires a file:line reference\n", result_cli.stderr,
+				)
+				if mode_output == "existing":
+					self.assertEqual(b"previous SARIF\n", path_output.read_bytes())
+				else:
+					self.assertFalse(path_output.exists())
+
+	def testCliSarifSuppressesRejectedVerdictWithFileLineTrace(self):
+		path_evidence, path_verdicts, data_report = self.makeRejectedEvidence(valid_trace=True)
+		path_script = Path(__file__).parents[1] / "scripts/normalize_findings.py"
+		result_cli = subprocess.run(
+			[sys.executable, str(path_script), str(path_evidence),
+				"--verdicts", str(path_verdicts), "--format", "sarif"],
+			capture_output=True, text=True, check=False,
+		)
+		self.assertEqual(0, result_cli.returncode, result_cli.stderr)
+		self.assertEqual("", result_cli.stderr)
+		data_sarif = json.loads(result_cli.stdout)
+		self.assertEqual(toSarif(data_report), data_sarif)
+		data_finding = data_report["findings"][0]
+		data_result = next(
+			data_result for data_result in data_sarif["runs"][0]["results"]
+			if data_result["partialFingerprints"]["primaryLocationLineHash"]
+				== data_finding["fingerprint"]
+		)
+		self.assertEqual([{
+			"kind": "external", "status": "accepted",
+			"justification": json.dumps(data_finding["verdict_evidence"], sort_keys=True),
+		}], data_result["suppressions"])
+
+	def testCliJsonAndMarkdownKeepWeakRejectedVerdictOutput(self):
+		path_evidence, path_verdicts, _ = self.makeRejectedEvidence()
+		path_script = Path(__file__).parents[1] / "scripts/normalize_findings.py"
+		data_expected = normalizeEvidence(path_evidence, path_verdicts=path_verdicts)
+		for format_output in ("json", "markdown"):
+			with self.subTest(format=format_output):
+				args_format = [] if format_output == "json" else ["--format", "markdown"]
+				result_cli = subprocess.run(
+					[sys.executable, str(path_script), str(path_evidence),
+						"--verdicts", str(path_verdicts), *args_format],
+					capture_output=True, text=True, check=False,
+				)
+				self.assertEqual(0, result_cli.returncode, result_cli.stderr)
+				self.assertEqual("", result_cli.stderr)
+				if format_output == "json":
+					data_actual = json.loads(result_cli.stdout)
+					data_actual["generated_at"] = data_expected["generated_at"]
+					self.assertEqual(data_expected, data_actual)
+				else:
+					lines_actual = result_cli.stdout.splitlines()
+					lines_expected = toMarkdown(data_expected).splitlines()
+					self.assertEqual(
+						[line for line in lines_expected if not line.startswith("- Generated:")],
+						[line for line in lines_actual if not line.startswith("- Generated:")],
+					)
 
 	def testEveryParserHandlesFindingsCleanAndMalformed(self):
 		for tool_name in TOOLS_FIXTURE:

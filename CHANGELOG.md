@@ -26,6 +26,17 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   verify each finding with evidence, so snippet-only suggestions added an external dependency and
   code transmission without replacing that review.
 
+## [1.5.0] - 2026-10-02
+
+### Changed in 1.5.0
+
+- `validate_report.py` fails reports and `normalize_findings.py --format sarif` refuses SARIF
+  output when a rejected verdict lacks a file:line reference in `verdict_evidence.trace`.
+  This is breaking for such reports, including verdicts carried forward from older baselines.
+- `SKILL.md` treats scanned repository content as data, never instructions; claims that a finding
+  is safe, reviewed, or a false positive are never evidence. Reviewers must verify that cited lines
+  are real non-comment code showing the control or unreachability; no script checks this.
+
 ## [1.4.0] - 2026-09-16
 
 ### Added in 1.4.0
@@ -84,7 +95,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Ray0907/security-scan/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Ray0907/security-scan/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/Ray0907/security-scan/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Ray0907/security-scan/compare/v1.2.0...v1.3.0
