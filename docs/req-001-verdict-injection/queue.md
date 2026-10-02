@@ -1,0 +1,2 @@
+- [ ] issues/validator-rejected-trace.md
+- [ ] issues/skill-untrusted-content.md
