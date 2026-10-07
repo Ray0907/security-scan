@@ -7,7 +7,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added in Unreleased
+## [1.6.0] - 2026-10-07
+
+### Added in 1.6.0
 
 - Read-only OSV license-compliance scans for Node, Python, and Rust lockfiles with SPDX-expression
   severity classification, local-package provenance filtering, and explicit inconclusive coverage.
@@ -15,12 +17,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stay sequential as a precaution against cache/advisory-database lock conflicts (e.g. Trivy,
   cargo-audit); see `references/SCANNERS.md` for what was and was not confirmed in testing.
 
-### Changed in Unreleased
+### Changed in 1.6.0
 
 - Findings in subdirectory projects now include the project path in their fingerprint. Existing
   baselines and verdict files will report those findings as new once.
 
-### Removed in Unreleased
+### Removed in 1.6.0
 
 - Optional TypeSafe Jev verdict suggestions (`suggest_verdicts.py`). Reviewing agents already
   verify each finding with evidence, so snippet-only suggestions added an external dependency and
@@ -95,7 +97,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Ray0907/security-scan/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Ray0907/security-scan/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Ray0907/security-scan/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/Ray0907/security-scan/compare/v1.3.0...v1.3.1
