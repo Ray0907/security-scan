@@ -14,9 +14,19 @@ def validateVerdicts(document) -> list[str]:
 		return []
 	items_error = []
 	for index_finding, data_finding in enumerate(items_finding):
-		if not isinstance(data_finding, dict) or data_finding.get("verdict") != "rejected":
+		if not isinstance(data_finding, dict):
 			continue
 		data_evidence = data_finding.get("verdict_evidence")
+		if data_finding.get("verdict") == "needs_validation":
+			value_fact = data_evidence.get("unresolved_fact") if isinstance(data_evidence, dict) else None
+			if not isinstance(value_fact, str) or not value_fact.strip():
+				items_error.append(
+					f"/findings/{index_finding}/verdict_evidence/unresolved_fact: "
+					"needs_validation verdict requires a non-empty unresolved_fact"
+				)
+			continue
+		if data_finding.get("verdict") != "rejected":
+			continue
 		value_trace = data_evidence.get("trace") if isinstance(data_evidence, dict) else None
 		if not isinstance(value_trace, str) or not REGEX_FILE_LINE.search(value_trace):
 			items_error.append(

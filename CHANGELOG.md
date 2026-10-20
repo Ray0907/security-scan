@@ -7,6 +7,19 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-20
+
+### Added in 1.7.0
+
+- Severity calibration anchors, a "Not covered" report section, guidance-vs-scan mode, and an
+  anti-pattern list.
+
+### Changed in 1.7.0
+
+- A `needs_validation` verdict now requires a non-empty `verdict_evidence.unresolved_fact`;
+  `validate_report.py` fails reports without it. Existing verdict files that leave it null must
+  be updated.
+
 ## [1.6.0] - 2026-10-07
 
 ### Added in 1.6.0
