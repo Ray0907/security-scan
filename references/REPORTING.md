@@ -17,6 +17,23 @@ Preserve planner schema v2 `fallback`, `note`, and `evidence` context when descr
 Use exactly these scanner states: `clean`, `findings`, `failed`, `skipped`, and `inconclusive`.
 `Clean` applies only to the named tool and recorded scope; it never means the application is secure.
 
+## Severity Calibration
+
+Scanner severity is a starting point. When assigning or adjusting `normalized_severity` for a
+reviewed code finding, use these anchors and never exceed the impact the reviewed trace supports:
+
+- `critical`: an unauthenticated actor gains code execution, full data-store access, or account
+  takeover.
+- `high`: an actor fully defeats an explicit security control with real consequences, such as
+  authentication bypass, cross-tenant access, or stored script execution affecting other users.
+- `medium`: a real boundary violation with limited blast radius or uncommon preconditions.
+- `low`: disclosure of non-secret internals, or an effect needing sustained effort for little gain.
+- `info`: a minimal-impact observation, mainly useful as part of a larger finding.
+
+To separate `high` from `medium`, ask whether the result fully defeats a control or only weakens
+it. If you cannot state the concrete damage, the severity is lower than it feels. A missing best
+practice with no reachable boundary violation is not a finding.
+
 ## Finding Schema
 
 Keep the native identifier and severity alongside normalized values:
@@ -97,7 +114,8 @@ Apply these rules:
 
 - `confirmed`: an input surface can reach the vulnerable condition. `trace` names the path as
   file:line to file:line, or package to lockfile entry, and `reason` identifies the missing control.
-- `needs_validation`: `unresolved_fact` states exactly what could not be determined, such as
+- `needs_validation`: `unresolved_fact` is required and non-empty
+  (`validate_report.py` fails the report otherwise). It states exactly what could not be determined, such as
   whether `sanitize()` at `api/util.py:40` strips backticks. Keep the scanner's normalized severity;
   uncertainty is not a severity downgrade.
 - `rejected`: `reason` explains why the condition is unreachable or controlled and cites technical
@@ -157,6 +175,10 @@ Use this order:
 6. Prioritized remediation with fixed versions where verified.
 7. Rejected findings, reviewed false positives, and accepted risks.
 8. Limitations and incomplete enrichment.
+9. Not covered: paths excluded or out of scope, projects marked `skipped` or `inconclusive`,
+   OWASP categories with no automated coverage, and anything a scoped run (`--deps-only`,
+   `--code-only`, `--exclude`, `--owasp`) omitted. State that a scoped or partial scan says
+   nothing about the omitted parts, and never present the rest as secure.
 
 When NVD data is included, add this notice:
 
