@@ -96,10 +96,22 @@ class ValidateReportTest(unittest.TestCase):
 						"verdict": "rejected", "verdict_evidence": {"trace": value_trace},
 						"verdict_carried_forward": flag_carried,
 					}]}))
-		for name_verdict in ("confirmed", "needs_validation"):
-			with self.subTest(verdict=name_verdict):
-				self.assertEqual([], validateVerdicts({"findings": [{
-					"verdict": name_verdict, "verdict_evidence": {"trace": None},
+		self.assertEqual([], validateVerdicts({"findings": [{
+			"verdict": "confirmed", "verdict_evidence": {"trace": None},
+		}]}))
+		self.assertEqual([], validateVerdicts({"findings": [{
+			"verdict": "needs_validation",
+			"verdict_evidence": {"trace": None, "unresolved_fact": "Does sanitize() strip backticks?"},
+		}]}))
+
+	def testNeedsValidationRequiresUnresolvedFact(self):
+		for value_evidence in (None, {}, {"unresolved_fact": None}, {"unresolved_fact": "  "}):
+			with self.subTest(evidence=value_evidence):
+				self.assertEqual([
+					"/findings/0/verdict_evidence/unresolved_fact: "
+					"needs_validation verdict requires a non-empty unresolved_fact",
+				], validateVerdicts({"findings": [{
+					"verdict": "needs_validation", "verdict_evidence": value_evidence,
 				}]}))
 
 	def testSchemaInvalidShapesDoNotCrashVerdictValidation(self):

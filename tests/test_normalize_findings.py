@@ -461,7 +461,10 @@ class NormalizeFindingsTest(unittest.TestCase):
 			finding["change"] = "new" if index_finding == 0 else "unchanged"
 			if verdict:
 				finding["verdict"] = verdict
-				finding["verdict_evidence"] = {"reason": "Reviewed with trace", "trace": "input -> sink"}
+				finding["verdict_evidence"] = {
+					"reason": "Reviewed with trace", "trace": "input -> sink",
+					"unresolved_fact": "Unknown sanitizer behavior" if verdict == "needs_validation" else None,
+				}
 			findings.append(finding)
 		report_scan["findings"] = findings
 
