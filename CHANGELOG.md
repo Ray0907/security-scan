@@ -110,7 +110,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/Ray0907/security-scan/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/Ray0907/security-scan/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Ray0907/security-scan/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Ray0907/security-scan/compare/v1.3.1...v1.4.0
