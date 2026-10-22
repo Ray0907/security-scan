@@ -90,6 +90,29 @@ Important limitations:
   the scanner runs; symlinked lockfiles are not sent to OSV. Other ecosystems are explicitly marked
   unsupported.
 
+### Runtime versions
+
+`scripts/check_runtime.py` checks the Node.js and PHP versions that a repository declares. It reads
+`.nvmrc`, `.node-version`, `package.json` `engines.node`, `composer.json` `require.php`, and
+`FROM node:` / `FROM php:` lines in `Dockerfile*` and `Containerfile*`. The plan item has
+`kind: runtime`, `tool: runtime-versions`, and `coverage: declared-version-only`.
+
+- Coverage is **declared-version-only**. The deployed runtime can differ from the declared one.
+- An exact pin (`22.4.0`, `php:8.3.30-fpm`) is compared with the feed. A range (`>=20`, `^8.2`) or
+  a floating tag (`node:22`) never becomes a vulnerability finding. Ranges and unresolvable values
+  (`lts/*`, `${ARG}`, no tag) are `inconclusive` with a reason in the scanner record.
+- An end-of-life major (Node) or branch (PHP) is reported even for a floating tag, because every
+  patch of that line is unsupported.
+- Node uses the `nodejs/security-wg` core advisory feed and the Node release schedule. A finding
+  is CVE-matched. An advisory limited to one platform gets `low` confidence.
+- PHP uses `php.net` release data, which has no CVE mapping. A pin older than any security-tagged
+  release of its branch is `behind-security-release`. Do not attach CVE numbers to it.
+- The check fetches feeds at scan time. The output records the feed URL, fetch time, and sha256.
+  A failed fetch gives state `failed`, never clean. `--fixtures DIR` reads the same feeds from
+  files for offline and test runs.
+- The scanner record shows Python's version as `tool_version`, because the check runs as a Python
+  script.
+
 ## Evidence Runner
 
 Execute a saved plan without a shell:

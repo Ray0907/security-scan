@@ -7,6 +7,14 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added in Unreleased
+
+- Runtime-version check for Node.js and PHP (`kind: runtime`, `scripts/check_runtime.py`). It
+  matches exact pins against the `nodejs/security-wg` advisory feed, flags end-of-life lines, and
+  flags PHP pins that are older than a security release of their branch. Ranges, floating tags,
+  and unresolvable values stay `inconclusive`. Coverage is declared-version-only.
+- The findings schema accepts finding type `runtime`; the plan schema accepts kind `runtime`.
+
 ## [1.7.0] - 2026-10-20
 
 ### Added in 1.7.0

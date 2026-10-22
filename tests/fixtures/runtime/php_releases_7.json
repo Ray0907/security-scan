@@ -1,0 +1,29 @@
+{
+ "7.4.33": {
+  "date": "03 Nov 2022",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/7_4_33.php"
+  }
+ },
+ "7.4.32": {
+  "date": "29 Sep 2022",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/7_4_32.php"
+  }
+ },
+ "7.4.30": {
+  "date": "09 Jun 2022",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/7_4_30.php"
+  }
+ }
+}

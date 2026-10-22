@@ -570,6 +570,38 @@ def normalizeLicenseRecord(content: str, meta: dict, root: str, path_stdout: Pat
 	return findings, "inconclusive" if reason else "findings" if findings else "clean", reason
 
 
+def parseRuntimeVersions(content: str) -> list[dict]:
+	data_runtime = json.loads(content)
+	return [
+		makeFinding(
+			"runtime-versions", item["id"], "runtime", package=item["runtime"],
+			installed=item["version"], fixed=item["fixed"], severity=item["severity"],
+			location=item["location"], line=item["line"], summary=item["summary"],
+			references=item["references"], aliases=item["aliases"],
+			confidence=item["confidence"], owasp=["A03"],
+		)
+		for item in data_runtime["findings"]
+	]
+
+
+def normalizeRuntimeRecord(content: str) -> tuple:
+	"""Findings win; feed errors beat clean; every open item stays visible in the reason."""
+	data_runtime = json.loads(content)
+	findings = parseRuntimeVersions(content)
+	notes = [f"feed error: {error}" for error in data_runtime["errors"]]
+	if data_runtime["unparsed"]:
+		notes.append("unparsed advisory entries: " + ", ".join(data_runtime["unparsed"]))
+	notes.extend(
+		f"{item['file']}: {item['reason']}" for item in data_runtime["inconclusive"]
+	)
+	reason = "; ".join(notes) or None
+	if findings:
+		return findings, "findings", reason
+	if data_runtime["errors"]:
+		return [], "failed", reason
+	return [], "inconclusive" if notes else "clean", reason
+
+
 def normalizeSemgrepOwasp(labels_owasp, values_cwe) -> tuple[list[str], bool]:
 	categories = []
 	ambiguous = False
@@ -744,7 +776,10 @@ def normalizeEvidence(
 			try:
 				path_stdout = next(path_evidence.glob(f"{meta_record['plan_index']:02d}-*/stdout.txt"))
 				content_stdout = path_stdout.read_text(encoding="utf-8")
-				if meta_record["tool"] == "osv-scanner-license":
+				if meta_record["tool"] == "runtime-versions":
+					findings_scanner, state_scanner, reason_scanner = normalizeRuntimeRecord(
+						content_stdout)
+				elif meta_record["tool"] == "osv-scanner-license":
 					findings_scanner, state_scanner, reason_scanner = normalizeLicenseRecord(
 						content_stdout, meta_record, data_run["plan_root"], path_stdout)
 				else:

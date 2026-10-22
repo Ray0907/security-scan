@@ -204,6 +204,7 @@ A completed report records every scanner state explicitly:
 | Go | `go.mod` | `govulncheck` |
 | Rust | `Cargo.lock` | `cargo-audit` |
 | PHP | `composer.lock` | Composer audit |
+| Node.js and PHP runtime | `.nvmrc`, `engines.node`, `require.php`, Dockerfile `FROM` | Release feeds, declared version only |
 | Ruby | `Gemfile.lock` | `bundler-audit` |
 | Java | Maven or Gradle manifest | Trivy filesystem fallback |
 | Container | `Dockerfile*`, `Containerfile*` | Trivy misconfiguration scan |

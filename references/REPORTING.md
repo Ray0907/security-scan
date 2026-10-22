@@ -127,6 +127,11 @@ Apply these rules:
     showing the control or unreachability.
 - A dependency finding defaults to `confirmed` when its installed or locked version matches the
   vulnerable range. Lower it to `rejected` only with a documented reachability argument.
+- A `runtime` finding (type `runtime`) comes from a declared version, not from the deployed
+  runtime. Without deployment evidence, set `needs_validation` with `unresolved_fact` set to
+  "deployed runtime version". Use `confirmed` only when the deployed version is shown, for
+  example by a pinned image digest in the deploy manifest. PHP findings are not CVE-matched and
+  have `unknown` severity; do not add CVE numbers or a severity to them.
 - Findings without a verdict are unreviewed. Report them under a separate Unreviewed heading, and
   never describe unreviewed Semgrep results as confirmed vulnerabilities.
 

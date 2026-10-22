@@ -17,6 +17,8 @@ Produce an evidence-backed security assessment without changing application code
   run project scripts, or modify global client settings without explicit approval. OSV license
   lookup (like the existing OSV vulnerability fallback) queries deps.dev over the network;
   it does not install or execute project dependencies.
+- The runtime-version check fetches Node.js and PHP release feeds at scan time. It covers the
+  declared version only; never describe it as proof of the deployed runtime version.
 - Never report a clean scan when a tool failed, was missing, or could not cover the target.
 - Never copy secret values into chat or reports. Follow
   [the reporting and redaction contract](references/REPORTING.md).
@@ -36,8 +38,8 @@ user asks to scan, audit, or check a repository. If it could mean either, ask on
 Default to dependency, license-compliance, and code scanning. Apply these modes before running
 tools:
 
-- `--deps-only`: include license records; skip Semgrep.
-- `--code-only`: skip dependency and license scanners.
+- `--deps-only`: include license and runtime-version records; skip Semgrep.
+- `--code-only`: skip dependency, license, and runtime-version scanners.
 - `--owasp A01` through `A10`: retain only findings mapped to that 2025 category.
 - `--severity critical,high`: filter after normalizing scanner output.
 - `--export-bypass`: read the reporting reference and export reviewed false positives only.

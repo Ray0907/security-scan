@@ -8,6 +8,13 @@ import re
 from fnmatch import fnmatchcase
 from pathlib import Path, PurePosixPath
 
+try:
+	from scripts.check_runtime import getDeclarations
+except ModuleNotFoundError:
+	from check_runtime import getDeclarations
+
+PATH_CHECK_RUNTIME = Path(__file__).resolve().with_name("check_runtime.py")
+
 NAMES_SKIPPED = {
 	".git",
 	".mypy_cache",
@@ -517,8 +524,24 @@ def getIacEvidence(path_project: Path, names_file: set[str]) -> list[str]:
 	return names_evidence[:10]
 
 
+def getRuntimeProject(path_project: Path, path_root: Path) -> list[dict]:
+	declarations, problems = getDeclarations(path_project)
+	names_evidence = sorted({item["file"] for item in declarations + problems})
+	if not names_evidence:
+		return []
+	return [{
+		"kind": "runtime",
+		"path": getRelativePath(path_project, path_root),
+		"tool": "runtime-versions",
+		"status": "ready",
+		"coverage": "declared-version-only",
+		"command": ["python3", str(PATH_CHECK_RUNTIME), "."],
+		"evidence": names_evidence,
+	}]
+
+
 def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> list[dict]:
-	items_project = []
+	items_project = getRuntimeProject(path_project, path_root)
 	if "package.json" in names_file:
 		items_project.append(getNodeProject(path_project, names_file, path_root))
 	if (

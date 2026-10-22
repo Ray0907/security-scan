@@ -18,3 +18,11 @@ Findings fixtures are real scanner output trimmed to at most two findings. Clean
 | Semgrep | 1.176.0 | `semgrep scan --config p/owasp-top-ten --json --metrics=off .` | 2026-09-16 |
 | Gitleaks | 8.30.1 | `gitleaks dir . --no-banner --redact --report-format json --report-path -` | 2026-09-16 |
 | zizmor | 1.30.1 | `zizmor --format json --offline .github/workflows` | 2026-09-16 |
+
+## Runtime fixtures
+
+`runtime/` holds trimmed snapshots of the feeds read by `scripts/check_runtime.py`, taken
+2026-10-22. They are not scanner output. `node_core.json` keeps 11 entries of the 194 in
+`nodejs/security-wg` `vuln/core/index.json`, chosen to cover every range syntax in the feed.
+`node_schedule.json` is the full `nodejs/Release` `schedule.json`. The PHP files keep only
+`date`, `tags`, and `announcement` for recent releases of 7.4, 8.1, 8.2, 8.3, 8.4, and 8.5.

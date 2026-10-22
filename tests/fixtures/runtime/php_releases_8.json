@@ -1,0 +1,286 @@
+{
+ "8.5.12": {
+  "date": "21 Oct 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": true
+ },
+ "8.4.27": {
+  "date": "21 Oct 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": true
+ },
+ "8.3.36": {
+  "date": "21 Oct 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": true
+ },
+ "8.2.35": {
+  "date": "21 Oct 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": true
+ },
+ "8.5.11": {
+  "date": "24 Sep 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_5_11.php"
+  }
+ },
+ "8.4.26": {
+  "date": "24 Sep 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_4_26.php"
+  }
+ },
+ "8.3.35": {
+  "date": "24 Sep 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_3_35.php"
+  }
+ },
+ "8.2.34": {
+  "date": "24 Sep 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_2_34.php"
+  }
+ },
+ "8.4.25": {
+  "date": "27 Aug 2026",
+  "tags": [
+   ""
+  ],
+  "announcement": {
+   "English": "/releases/8_4_25.php"
+  }
+ },
+ "8.2.33": {
+  "date": "30 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_2_33.php"
+  }
+ },
+ "8.5.10": {
+  "date": "27 Aug 2026",
+  "tags": [
+   ""
+  ],
+  "announcement": {
+   "English": "/releases/8_5_10.php"
+  }
+ },
+ "8.3.33": {
+  "date": "30 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_3_33.php"
+  }
+ },
+ "8.5.9": {
+  "date": "30 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_5_9.php"
+  }
+ },
+ "8.4.24": {
+  "date": "30 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_4_24.php"
+  }
+ },
+ "8.3.32": {
+  "date": "02 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_3_32.php"
+  }
+ },
+ "8.5.8": {
+  "date": "02 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_5_8.php"
+  }
+ },
+ "8.2.32": {
+  "date": "02 Jul 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_2_32.php"
+  }
+ },
+ "8.5.7": {
+  "date": "04 Jun 2026",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_5_7.php"
+  }
+ },
+ "8.3.31": {
+  "date": "07 May 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_3_31.php"
+  }
+ },
+ "8.5.6": {
+  "date": "07 May 2026",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_5_6.php"
+  }
+ },
+ "8.5.5": {
+  "date": "09 Apr 2026",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_5_5.php"
+  }
+ },
+ "8.3.30": {
+  "date": "15 Jan 2026",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_3_30.php"
+  }
+ },
+ "8.5.4": {
+  "date": "12 Mar 2026",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_5_4.php"
+  }
+ },
+ "8.5.3": {
+  "date": "12 Feb 2026",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_5_3.php"
+  }
+ },
+ "8.5.2": {
+  "date": "15 Jan 2026",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_5_2.php"
+  }
+ },
+ "8.5.1": {
+  "date": "18 Dec 2025",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_5_1.php"
+  }
+ },
+ "8.3.29": {
+  "date": "18 Dec 2025",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_3_29.php"
+  }
+ },
+ "8.1.34": {
+  "date": "18 Dec 2025",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_1_34.php"
+  }
+ },
+ "8.1.33": {
+  "date": "3 Jul 2025",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_1_33.php"
+  }
+ },
+ "8.3.28": {
+  "date": "20 Nov 2025",
+  "tags": [],
+  "announcement": {
+   "English": "/releases/8_3_28.php"
+  }
+ },
+ "8.5.0": {
+  "date": "20 Nov 2025",
+  "tags": [
+   ""
+  ],
+  "announcement": {
+   "English": "/releases/8_5_0.php"
+  }
+ },
+ "8.1.32": {
+  "date": "13 Mar 2025",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_1_32.php"
+  }
+ },
+ "8.1.31": {
+  "date": "21 Nov 2024",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_1_31.php"
+  }
+ },
+ "8.1.30": {
+  "date": "26 Sep 2024",
+  "tags": [
+   "security"
+  ],
+  "announcement": {
+   "English": "/releases/8_1_30.php"
+  }
+ }
+}
