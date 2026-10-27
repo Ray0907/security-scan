@@ -227,8 +227,10 @@ during a scan.
    verdicts remain unreviewed.
 5. The normalizer and `scripts/validate_report.py` enforce the published JSON report schema.
 6. Semgrep runs with `p/owasp-top-ten` and metrics disabled for code-pattern coverage.
-7. Findings retain native advisory IDs and are normalized to OWASP 2025 only when supported.
-8. Reports list every scanner as `clean`, `findings`, `failed`, `skipped`, or `inconclusive`.
+7. `scripts/check_runtime.py` compares the declared Node.js and PHP versions with public release
+   feeds. It checks the declared version only, not the deployed runtime.
+8. Findings retain native advisory IDs and are normalized to OWASP 2025 only when supported.
+9. Reports list every scanner as `clean`, `findings`, `failed`, `skipped`, or `inconclusive`.
 
 Detailed contracts:
 
@@ -263,13 +265,16 @@ security-scan/
 │   ├── scan-plan.schema.json
 │   └── security-findings.schema.json
 ├── scripts/
+│   ├── check_runtime.py
 │   ├── normalize_findings.py
 │   ├── redaction.py
 │   ├── run_plan.py
 │   ├── scan_plan.py
-│   └── validate_report.py
+│   ├── validate_report.py
+│   └── verdict_rules.py
 ├── tests/
 │   ├── fixtures/               # Minimal scanner output samples
+│   ├── test_check_runtime.py
 │   ├── test_normalize_findings.py
 │   ├── test_run_plan.py
 │   ├── test_scan_plan.py

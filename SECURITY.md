@@ -15,8 +15,9 @@ not include live secrets or sensitive repository contents.
 
 ## Scope
 
-Security reports may cover `scripts/scan_plan.py` and documentation that instructs agents how to
-plan, execute, or report scans. Vulnerabilities in third-party scanners should be reported to their
+Security reports may cover `scripts/scan_plan.py`, `scripts/run_plan.py` (runs external scanner
+commands), `scripts/check_runtime.py` (fetches release feeds from the network), and documentation
+that instructs agents how to plan, execute, or report scans. Vulnerabilities in third-party scanners should be reported to their
 maintainers.
 
 ## Response

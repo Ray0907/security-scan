@@ -7,7 +7,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added in Unreleased
+## [1.8.0] - 2026-10-27
+
+### Added in 1.8.0
 
 - Runtime-version check for Node.js and PHP (`kind: runtime`, `scripts/check_runtime.py`). It
   matches exact pins against the `nodejs/security-wg` advisory feed, flags end-of-life lines, and
