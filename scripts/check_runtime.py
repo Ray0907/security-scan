@@ -111,11 +111,18 @@ def readText(path_file: Path) -> str:
 		return handle.read(MAX_FILE_BYTES).decode("utf-8", errors="replace")
 
 
-def getJsonLine(text_file: str, key: str) -> int | None:
-	for number_line, line in enumerate(text_file.splitlines(), 1):
-		if re.search(rf'"{re.escape(key)}"\s*:', line):
-			return number_line
-	return None
+def getJsonLine(text_file: str, keys: tuple) -> int | None:
+	lines = text_file.splitlines()
+	number_line = 0
+	for key in keys:
+		pattern = re.compile(rf'"{re.escape(key)}"\s*:')
+		number_line = next(
+			(index for index in range(number_line, len(lines)) if pattern.search(lines[index])),
+			None,
+		)
+		if number_line is None:
+			return None
+	return number_line + 1
 
 
 def readVersionFile(text_file: str, name_file: str) -> list[dict]:
@@ -133,7 +140,7 @@ def readJsonField(text_file: str, name_file: str, runtime: str, path_keys: tuple
 		value = value.get(key) if isinstance(value, dict) else None
 	if value is None:
 		return []
-	return [{"runtime": runtime, "file": name_file, "line": getJsonLine(text_file, path_keys[-1]),
+	return [{"runtime": runtime, "file": name_file, "line": getJsonLine(text_file, path_keys),
 		"raw": str(value)}]
 
 

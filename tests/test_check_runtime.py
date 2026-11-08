@@ -24,7 +24,7 @@ from datetime import date
 from pathlib import Path
 
 from scripts.check_runtime import (
-	checkRuntime, getDeclarations, matchesRange, parseDeclaration,
+	checkRuntime, getDeclarations, matchesRange, parseDeclaration, readJsonField,
 )
 from scripts.normalize_findings import normalizeEvidence
 from scripts.run_plan import runPlan
@@ -75,6 +75,13 @@ class DeclarationTest(unittest.TestCase):
 		for runtime, raw, expected in cases:
 			with self.subTest(raw=raw):
 				self.assertEqual(expected, parseDeclaration(runtime, raw)["class"])
+
+
+class JsonLineTest(unittest.TestCase):
+	def testNestedKeyLineIgnoresEarlierSameNameKey(self):
+		text = '{\n "scripts": {"node": "x"},\n "engines": {\n  "node": ">=18"\n }\n}'
+		found = readJsonField(text, "package.json", "node", ("engines", "node"))
+		self.assertEqual(4, found[0]["line"])
 
 
 class CheckRuntimeTest(unittest.TestCase):
