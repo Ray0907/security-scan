@@ -114,6 +114,8 @@ Apply these rules:
 
 - `confirmed`: an input surface can reach the vulnerable condition. `trace` names the path as
   file:line to file:line, or package to lockfile entry, and `reason` identifies the missing control.
+  Enforced: `verdict_evidence.trace` must be non-empty, and `reason`, `reviewer`, and `reviewed_at`
+  must not be blank on any reviewed finding (`validate_report.py` fails the report otherwise).
 - `needs_validation`: `unresolved_fact` is required and non-empty
   (`validate_report.py` fails the report otherwise). It states exactly what could not be determined, such as
   whether `sanitize()` at `api/util.py:40` strips backticks. Keep the scanner's normalized severity;

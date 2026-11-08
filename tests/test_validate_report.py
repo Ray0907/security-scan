@@ -97,7 +97,8 @@ class ValidateReportTest(unittest.TestCase):
 						"verdict_carried_forward": flag_carried,
 					}]}))
 		self.assertEqual([], validateVerdicts({"findings": [{
-			"verdict": "confirmed", "verdict_evidence": {"trace": None},
+			"verdict": "confirmed",
+			"verdict_evidence": {"trace": "lodash 4.17.20 -> package-lock.json"},
 		}]}))
 		self.assertEqual([], validateVerdicts({"findings": [{
 			"verdict": "needs_validation",
@@ -113,6 +114,31 @@ class ValidateReportTest(unittest.TestCase):
 				], validateVerdicts({"findings": [{
 					"verdict": "needs_validation", "verdict_evidence": value_evidence,
 				}]}))
+
+	def testConfirmedVerdictRequiresNonEmptyTrace(self):
+		for value_evidence in (None, {}, {"trace": None}, {"trace": ""}, {"trace": "  "}):
+			with self.subTest(evidence=value_evidence):
+				self.assertEqual([
+					"/findings/0/verdict_evidence/trace: "
+					"confirmed verdict requires a non-empty trace",
+				], validateVerdicts({"findings": [{
+					"verdict": "confirmed", "verdict_evidence": value_evidence,
+				}]}))
+
+	def testReviewedVerdictsRejectBlankEvidenceStrings(self):
+		for verdict in ("confirmed", "needs_validation", "rejected"):
+			for field in ("reason", "reviewer", "reviewed_at"):
+				with self.subTest(verdict=verdict, field=field):
+					evidence = {
+						"trace": "api/view.py:12", "unresolved_fact": "Does sanitize() strip?",
+						"reason": "Control at api/view.py:12.", "reviewer": "security-reviewer",
+						"reviewed_at": "2026-09-16T00:00:00+00:00", field: "  ",
+					}
+					self.assertEqual([
+						f"/findings/0/verdict_evidence/{field}: must not be blank",
+					], validateVerdicts({"findings": [{
+						"verdict": verdict, "verdict_evidence": evidence,
+					}]}))
 
 	def testSchemaInvalidShapesDoNotCrashVerdictValidation(self):
 		for data_document in (None, [], {}, {"findings": None}, {"findings": {}}):

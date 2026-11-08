@@ -7,10 +7,19 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added in Unreleased
+## [1.9.0] - 2026-11-08
+
+### Added in 1.9.0
 
 - The Markdown report adds a `Reason` column to the scanner table and a `Not Covered` section
   listing skipped, inconclusive, and failed scanners and OWASP categories without coverage.
+
+### Changed in 1.9.0
+
+- Breaking: `validate_report.py` and `normalize_findings.py --format sarif` now reject a
+  `confirmed` verdict without a non-empty `verdict_evidence.trace`, and any reviewed finding whose
+  `reason`, `reviewer`, or `reviewed_at` is blank. Reports with such verdicts that passed before
+  now fail. Add the missing evidence to the verdict and normalize again.
 
 ### Fixed
 
@@ -135,7 +144,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/Ray0907/security-scan/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/Ray0907/security-scan/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Ray0907/security-scan/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/Ray0907/security-scan/compare/v1.5.0...v1.6.0
