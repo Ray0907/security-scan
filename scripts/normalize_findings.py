@@ -1,696 +1,110 @@
-#!/usr/bin/env python3
 """Normalize redacted scanner evidence into JSON, SARIF, or Markdown."""
 
 import argparse
-import hashlib
 import json
-import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 try:
+	from scripts.code_parsers import (
+		OWASP_2021,
+		normalizeSemgrepOwasp,
+		parseGitleaks,
+		parseSemgrep,
+		parseZizmor,
+	)
+	from scripts.dependency_parsers import (
+		LOCKFILES_NODE,
+		parseAdvisory,
+		parseBun,
+		parseBundlerAudit,
+		parseCargoAudit,
+		parseComposer,
+		parseGovulncheck,
+		parseJsonStream,
+		parseNpm,
+		parseOsvScanner,
+		parsePipAudit,
+		parsePnpm,
+		parseTrivy,
+		parseYarn,
+	)
+	from scripts.finding_core import (
+		CONFIDENCE_ORDER,
+		DEPENDENCY_TOOLS,
+		SEVERITY_ORDER,
+		getFingerprint,
+		getIdentifier,
+		getTimestamp,
+		makeFinding,
+		normalizeSeverity,
+	)
+	from scripts.license_records import (
+		UnsupportedLockfileError,
+		classifySpdxLicense,
+		getRegistryPackages,
+		licenseAtom,
+		normalizeLicenseRecord,
+		normalizeRuntimeRecord,
+		parseOsvScannerLicense,
+		parseRuntimeVersions,
+	)
 	from scripts.redaction import redactText
+	from scripts.report_output import getMarkdownRow, toMarkdown, toSarif
 	from scripts.validate_report import loadSchema, validateDocument
 	from scripts.verdict_rules import validateVerdicts
 except ModuleNotFoundError:
+	from code_parsers import (
+		OWASP_2021,
+		normalizeSemgrepOwasp,
+		parseGitleaks,
+		parseSemgrep,
+		parseZizmor,
+	)
+	from dependency_parsers import (
+		LOCKFILES_NODE,
+		parseAdvisory,
+		parseBun,
+		parseBundlerAudit,
+		parseCargoAudit,
+		parseComposer,
+		parseGovulncheck,
+		parseJsonStream,
+		parseNpm,
+		parseOsvScanner,
+		parsePipAudit,
+		parsePnpm,
+		parseTrivy,
+		parseYarn,
+	)
+	from finding_core import (
+		CONFIDENCE_ORDER,
+		DEPENDENCY_TOOLS,
+		SEVERITY_ORDER,
+		getFingerprint,
+		getIdentifier,
+		getTimestamp,
+		makeFinding,
+		normalizeSeverity,
+	)
+	from license_records import (
+		UnsupportedLockfileError,
+		classifySpdxLicense,
+		getRegistryPackages,
+		licenseAtom,
+		normalizeLicenseRecord,
+		normalizeRuntimeRecord,
+		parseOsvScannerLicense,
+		parseRuntimeVersions,
+	)
 	from redaction import redactText
+	from report_output import getMarkdownRow, toMarkdown, toSarif
 	from validate_report import loadSchema, validateDocument
 	from verdict_rules import validateVerdicts
 
-SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4, "unknown": 5}
-CONFIDENCE_ORDER = {"high": 0, "medium": 1, "low": 2, "unknown": 3}
-OWASP_2021 = {
-	"A01": "A01", "A02": "A04", "A03": "A05", "A04": "A06", "A05": "A02",
-	"A06": "A03", "A07": "A07", "A08": "A08", "A09": "A09", "A10": "A01",
-}
-DEPENDENCY_TOOLS = {
-	"npm", "pnpm", "yarn", "bun", "pip-audit", "govulncheck", "cargo-audit",
-	"composer", "bundler-audit", "osv-scanner",
-}
 
+#!/usr/bin/env python3
 
-def getTimestamp() -> str:
-	return datetime.now(timezone.utc).isoformat()
-
-
-def normalizeSeverity(value_severity=None, score_cvss=None) -> str:
-	if value_severity is not None:
-		value_normalized = str(value_severity).lower()
-		values_map = {
-			"critical": "critical", "high": "high", "error": "high", "medium": "medium",
-			"moderate": "medium", "warning": "medium", "low": "low", "info": "info",
-		}
-		if value_normalized in values_map:
-			return values_map[value_normalized]
-	if score_cvss is not None:
-		try:
-			score_value = float(score_cvss)
-		except (TypeError, ValueError):
-			return "unknown"
-		if score_value >= 9:
-			return "critical"
-		if score_value >= 7:
-			return "high"
-		if score_value >= 4:
-			return "medium"
-		if score_value > 0:
-			return "low"
-		return "info"
-	return "unknown"
-
-
-def getIdentifier(value_url, fallback=None):
-	if isinstance(value_url, str) and value_url:
-		return value_url.rstrip("/").rsplit("/", 1)[-1]
-	return str(fallback) if fallback is not None else "unknown"
-
-
-def getFingerprint(finding: dict) -> str:
-	value_fingerprint = "|".join(
-		str(finding.get(key) or "")
-		for key in ("source", "id", "package", "location", "line")
-	)
-	return hashlib.sha256(value_fingerprint.encode()).hexdigest()[:16]
-
-
-def makeFinding(
-	source: str,
-	identifier: str,
-	type_finding: str,
-	package=None,
-	installed=None,
-	fixed=None,
-	severity=None,
-	score=None,
-	location=None,
-	summary=None,
-	references=None,
-	aliases=None,
-	cwe=None,
-	rule_id=None,
-	line=None,
-	confidence=None,
-	snippet=None,
-	owasp=None,
-) -> dict:
-	location = location or "."
-	identifier = str(identifier)
-	item_finding = {
-		"id": identifier,
-		"aliases": list(aliases or ()),
-		"source": source,
-		"type": type_finding,
-		"package": package,
-		"installed_version": installed,
-		"fixed_versions": list(fixed or ()),
-		"native_severity": str(severity) if severity is not None else None,
-		"normalized_severity": normalizeSeverity(severity, score),
-		"owasp_2025": list(owasp or (["A03"] if type_finding == "dependency" else ())),
-		"location": location,
-		"summary": summary or identifier,
-		"references": list(references or ()),
-		"cwe": list(cwe or ()),
-		"rule_id": rule_id,
-		"line": line,
-		"confidence": str(confidence).lower() if confidence else "unknown",
-	}
-	if snippet is not None:
-		snippet_redacted, count_redaction = redactText(str(snippet))
-		if count_redaction and len(str(snippet)) > 200:
-			item_finding["snippet_omitted_reason"] = (
-				"snippet exceeded 200 characters and contained redacted content"
-			)
-		else:
-			item_finding["snippet"] = snippet_redacted
-	item_finding["fingerprint"] = getFingerprint(item_finding)
-	return item_finding
-
-
-LOCKFILES_NODE = {
-	"npm": "package-lock.json",
-	"pnpm": "pnpm-lock.yaml",
-	"yarn": "yarn.lock",
-	"bun": "bun.lock",
-	"composer": "composer.lock",
-}
-
-
-def parseAdvisory(source: str, package: str, advisory: dict) -> dict:
-	identifier = advisory.get("id") or advisory.get("advisoryId") or advisory.get("cve")
-	url_advisory = advisory.get("url") or advisory.get("link")
-	aliases = list(advisory.get("cves") or [])
-	if advisory.get("cve"):
-		aliases.append(advisory["cve"])
-	aliases.extend(
-		source["remoteId"] for source in advisory.get("sources", [])
-		if source.get("remoteId")
-	)
-	identifier_github = advisory.get("github_advisory_id") or (
-		getIdentifier(url_advisory) if url_advisory and "GHSA-" in url_advisory else None
-	)
-	if identifier_github and (not identifier or str(identifier).isdigit()):
-		if identifier:
-			aliases.append(str(identifier))
-		identifier = identifier_github
-	if not identifier:
-		identifier = getIdentifier(url_advisory)
-	fixed_versions = advisory.get("fix_versions") or []
-	patched = advisory.get("patched_versions")
-	if patched and not fixed_versions:
-		fixed_versions = patched if isinstance(patched, list) else [patched]
-	return makeFinding(
-		source, identifier, "dependency", package=package,
-		fixed=fixed_versions, severity=advisory.get("severity"),
-		location=LOCKFILES_NODE.get(source, "package-lock.json"),
-		summary=advisory.get("title") or advisory.get("summary"),
-		references=[url_advisory] if url_advisory else [], aliases=aliases,
-		cwe=advisory.get("cwe") or advisory.get("cwes") or [],
-	)
-
-
-def parseNpm(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for package, vulnerability in data["vulnerabilities"].items():
-		for advisory in vulnerability.get("via", []):
-			if isinstance(advisory, dict):
-				item = parseAdvisory("npm", package, advisory)
-				item["native_severity"] = advisory.get("severity") or vulnerability.get("severity")
-				item["normalized_severity"] = normalizeSeverity(item["native_severity"])
-				fix_available = vulnerability.get("fixAvailable")
-				if isinstance(fix_available, dict) and fix_available.get("version"):
-					item["fixed_versions"] = [fix_available["version"]]
-				items.append(item)
-	return items
-
-
-def parsePnpm(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for advisory in data["advisories"].values():
-		item = parseAdvisory("pnpm", advisory.get("module_name", "unknown"), advisory)
-		findings = advisory.get("findings") or []
-		item["installed_version"] = findings[0].get("version") if findings else None
-		items.append(item)
-	return items
-
-
-def parseYarn(content: str) -> list[dict]:
-	items = []
-	found_shape = False
-	for line in content.splitlines():
-		if not line.strip():
-			continue
-		data = json.loads(line)
-		if data.get("type") == "auditAdvisory":
-			found_shape = True
-			advisory = data["data"]["advisory"]
-			item = parseAdvisory("yarn", advisory.get("module_name", "unknown"), advisory)
-			findings = advisory.get("findings") or []
-			item["installed_version"] = findings[0].get("version") if findings else None
-			items.append(item)
-		elif "advisories" in data:
-			found_shape = True
-			for advisory in data["advisories"].values():
-				item = parseAdvisory("yarn", advisory.get("module_name", "unknown"), advisory)
-				findings = advisory.get("findings") or []
-				item["installed_version"] = findings[0].get("version") if findings else None
-				items.append(item)
-		elif data.get("type") == "auditSummary":
-			found_shape = True
-	if not found_shape:
-		raise ValueError("unsupported yarn JSON stream")
-	return items
-
-
-def parseBun(content: str) -> list[dict]:
-	data = json.loads(content)
-	return [parseAdvisory("bun", package, advisory) for package, values in data.items() for advisory in values]
-
-
-def parsePipAudit(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for dependency in data["dependencies"]:
-		vulnerabilities = {}
-		for vulnerability in dependency.get("vulns", []):
-			vulnerabilities.setdefault(vulnerability["id"], vulnerability)
-		for vulnerability in vulnerabilities.values():
-			items.append(
-				makeFinding(
-					"pip-audit", vulnerability["id"], "dependency",
-					package=dependency.get("name"), installed=dependency.get("version"),
-					fixed=vulnerability.get("fix_versions"), location="requirements.txt",
-					summary=vulnerability.get("description"), aliases=vulnerability.get("aliases"),
-				)
-			)
-	return items
-
-
-def parseJsonStream(content: str) -> list[dict]:
-	decoder_json = json.JSONDecoder()
-	items_json = []
-	index_json = 0
-	while index_json < len(content):
-		match_space = re.match(r"\s*", content[index_json:])
-		index_json += len(match_space.group())
-		if index_json == len(content):
-			break
-		item_json, index_end = decoder_json.raw_decode(content, index_json)
-		items_json.append(item_json)
-		index_json = index_end
-	return items_json
-
-
-def parseGovulncheck(content: str) -> list[dict]:
-	values_osv = {}
-	values_finding = []
-	found_shape = False
-	for data in parseJsonStream(content):
-		if "osv" in data:
-			found_shape = True
-			values_osv[data["osv"]["id"]] = data["osv"]
-		elif "finding" in data:
-			found_shape = True
-			values_finding.append(data["finding"])
-		elif "config" in data:
-			found_shape = True
-	if not found_shape:
-		raise ValueError("unsupported govulncheck JSON stream")
-	items = []
-	for finding in values_finding:
-		identifier = finding.get("osv") or finding.get("id")
-		osv = values_osv.get(identifier, {})
-		trace = finding.get("trace") or [{}]
-		frame = trace[0]
-		position = frame.get("position") or {}
-		items.append(
-			makeFinding(
-				"govulncheck", identifier, "dependency", package=frame.get("module") or frame.get("package"),
-				fixed=[finding["fixed_version"]] if finding.get("fixed_version") else [],
-				location=position.get("filename") or "go.mod", line=position.get("line"),
-				summary=osv.get("summary"), aliases=osv.get("aliases"),
-				references=[osv.get("database_specific", {}).get("url")] if osv.get("database_specific", {}).get("url") else [],
-			)
-		)
-	return items
-
-
-def parseCargoAudit(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for value in data["vulnerabilities"]["list"]:
-		advisory = value["advisory"]
-		package = value.get("package", {})
-		items.append(
-			makeFinding(
-				"cargo-audit", advisory["id"], "dependency", package=package.get("name") or advisory.get("package"),
-				installed=package.get("version"), fixed=value.get("versions", {}).get("patched"),
-				severity=advisory.get("cvss"), score=advisory.get("cvss"), location="Cargo.lock",
-				summary=advisory.get("title") or advisory.get("description"),
-				references=[advisory["url"]] if advisory.get("url") else [],
-			)
-		)
-	return items
-
-
-def parseComposer(content: str) -> list[dict]:
-	data = json.loads(content)
-	advisories = data["advisories"]
-	if isinstance(advisories, list):
-		return []
-	return [parseAdvisory("composer", package, advisory) for package, values in advisories.items() for advisory in values]
-
-
-def parseBundlerAudit(content: str) -> list[dict]:
-	data = json.loads(content[content.index("{"):])
-	items = []
-	for result in data["results"]:
-		if result.get("type") != "unpatched_gem":
-			continue
-		advisory = result["advisory"]
-		gem = result.get("gem", {})
-		items.append(
-			makeFinding(
-				"bundler-audit", advisory["id"], "dependency", package=gem.get("name"),
-				installed=gem.get("version"),
-				fixed=advisory.get("patched_versions") or ([advisory["solution"]] if advisory.get("solution") else []),
-				severity=advisory.get("criticality"), score=advisory.get("cvss_v3"), location="Gemfile.lock",
-				summary=advisory.get("title"), references=[advisory["url"]] if advisory.get("url") else [],
-			)
-		)
-	return items
-
-
-def parseTrivy(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for result in data.get("Results", []):
-		location = result.get("Target", ".")
-		for vulnerability in result.get("Vulnerabilities") or []:
-			items.append(
-				makeFinding(
-					"trivy", vulnerability["VulnerabilityID"], "dependency",
-					package=vulnerability.get("PkgName"), installed=vulnerability.get("InstalledVersion"),
-					fixed=[vulnerability["FixedVersion"]] if vulnerability.get("FixedVersion") else [],
-					severity=vulnerability.get("Severity"), location=location,
-					summary=vulnerability.get("Title"),
-					references=[vulnerability["PrimaryURL"]] if vulnerability.get("PrimaryURL") else [],
-					cwe=vulnerability.get("CweIDs"),
-				)
-			)
-		for misconfiguration in result.get("Misconfigurations") or []:
-			cause = misconfiguration.get("CauseMetadata") or {}
-			items.append(
-				makeFinding(
-					"trivy", misconfiguration["ID"], "misconfiguration",
-					severity=misconfiguration.get("Severity"), location=location,
-					summary=misconfiguration.get("Title") or misconfiguration.get("Description"),
-					references=[misconfiguration["PrimaryURL"]] if misconfiguration.get("PrimaryURL") else [],
-					rule_id=misconfiguration["ID"], line=cause.get("StartLine"),
-					snippet=misconfiguration.get("Message"), owasp=["A02"],
-				)
-			)
-	return items
-
-
-def parseOsvScanner(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for result in data["results"]:
-		location = result.get("source", {}).get("path", ".")
-		for package_data in result.get("packages", []):
-			package = package_data.get("package", {})
-			groups_score = {
-				identifier: group.get("max_severity")
-				for group in package_data.get("groups", []) for identifier in group.get("ids", [])
-			}
-			for vulnerability in package_data.get("vulnerabilities", []):
-				fixed_versions = sorted({
-					event["fixed"]
-					for affected in vulnerability.get("affected", [])
-					for range_data in affected.get("ranges", [])
-					for event in range_data.get("events", [])
-					if event.get("fixed")
-				})
-				score = groups_score.get(vulnerability["id"])
-				items.append(
-					makeFinding(
-						"osv-scanner", vulnerability["id"], "dependency", package=package.get("name"),
-						installed=package.get("version"), fixed=fixed_versions,
-						severity=score, score=score, location=location,
-						summary=vulnerability.get("summary") or vulnerability.get("details"),
-						aliases=vulnerability.get("aliases"),
-						references=[reference["url"] for reference in vulnerability.get("references", []) if reference.get("url")],
-					)
-				)
-	return items
-
-
-def licenseAtom(atom: str) -> str | None:
-	if atom.startswith(("AGPL-", "GPL-", "SSPL-")) or atom in {"AGPL", "GPL", "SSPL"}:
-		return "high"
-	if atom.startswith(("MPL-", "LGPL-", "EPL-", "CDDL-")) or atom in {
-		"MPL", "LGPL", "EPL", "CDDL"
-	}:
-		return "medium"
-	if atom in {"MIT", "Apache-2.0", "ISC", "0BSD", "Unlicense", "Unicode-3.0"} \
-			or atom.startswith("BSD-"):
-		return None
-	return "unknown"
-
-
-def classifySpdxLicense(expression: str | None) -> str | None:
-	"""AND applies all terms; OR permits the least restrictive branch."""
-	if not isinstance(expression, str) or not expression.strip():
-		return "unknown"
-	tokens = re.findall(r"\(|\)|[^\s()]+", expression)
-	values, operators = [], []
-	levels = {"OR": 1, "AND": 2}
-	ranks = {None: 0, "unknown": 1, "medium": 2, "high": 3}
-	expecting_atom = True
-
-	def applyOperator():
-		operator = operators.pop()
-		right, left = values.pop(), values.pop()
-		values.append(max((left, right), key=ranks.get) if operator == "AND"
-			else min((left, right), key=ranks.get))
-
-	for token in tokens:
-		if token == "(":
-			if not expecting_atom:
-				return "unknown"
-			operators.append(token)
-		elif token == ")":
-			if expecting_atom or "(" not in operators:
-				return "unknown"
-			while operators[-1] != "(":
-				applyOperator()
-			operators.pop()
-		elif token in levels:
-			if expecting_atom:
-				return "unknown"
-			while operators and operators[-1] != "(" and levels[operators[-1]] >= levels[token]:
-				applyOperator()
-			operators.append(token)
-			expecting_atom = True
-		else:
-			if not expecting_atom:
-				return "unknown"
-			values.append(licenseAtom(token))
-			expecting_atom = False
-	if expecting_atom or "(" in operators:
-		return "unknown"
-	while operators:
-		applyOperator()
-	return values[0]
-
-
-class UnsupportedLockfileError(ValueError):
-	"""Lockfile format/shape has no reliable provenance signal; caller must report inconclusive, not failed."""
-
-
-def getRegistryPackages(path_lock: Path) -> tuple[set[tuple[str, str]], set[tuple[str, str]]]:
-	"""Read lockfile-native provenance; never trust OSV's name-only license for local packages."""
-	registry, local = set(), set()
-	if path_lock.name == "Cargo.lock":
-		for block in path_lock.read_text(encoding="utf-8").split("[[package]]")[1:]:
-			name = re.search(r'^name = "([^"]+)"$', block, re.MULTILINE)
-			version = re.search(r'^version = "([^"]+)"$', block, re.MULTILINE)
-			if name and version:
-				key = (name[1], version[1])
-				(registry if re.search(r'^source = "registry\+', block, re.MULTILINE)
-					else local).add(key)
-	elif path_lock.name in {"package-lock.json", "npm-shrinkwrap.json"}:
-		data_lock = json.loads(path_lock.read_text(encoding="utf-8"))
-		if "packages" not in data_lock:
-			raise UnsupportedLockfileError("npm lockfile v1 (no \"packages\" map) has no provenance data")
-		for path_package, value in data_lock["packages"].items():
-			if not isinstance(value, dict) or not value.get("version"):
-				continue
-			name = value.get("name") or path_package.rsplit("node_modules/", 1)[-1]
-			key = (name, value["version"])
-			resolved = value.get("resolved", "")
-			# ponytail: non-tarball registry URLs remain inconclusive until provenance is verifiable.
-			(registry if isinstance(resolved, str) and
-				re.fullmatch(r"https?://[^/]+/.+/-/[^/]+\.tgz(?:\?.*)?", resolved)
-				and not value.get("link") and path_package else local).add(key)
-	else:
-		raise UnsupportedLockfileError("lockfile provenance not supported")
-	return registry - local, local
-
-
-def parseOsvScannerLicense(content: str, path_lock: Path) -> tuple[list[dict], str | None]:
-	if path_lock.name == "requirements.txt" or re.fullmatch(r"requirements.*\.txt", path_lock.name):
-		lines = path_lock.read_text(encoding="utf-8").splitlines()
-		pinned = {(match[1].lower().replace("_", "-"), match[2]) for line in lines
-			if (match := re.fullmatch(r"\s*([a-zA-Z0-9_.-]+)==([^\s;]+).*", line))}
-		unscanned = any(line.strip() and not line.lstrip().startswith("#") and
-			not re.fullmatch(r"\s*[a-zA-Z0-9_.-]+==[^\s;]+.*", line) for line in lines)
-		registry, local = None, set()
-	else:
-		registry, local = getRegistryPackages(path_lock)
-		unscanned = False
-	data = json.loads(content)
-	results = data["results"]
-	if not isinstance(results, list) or not any(result.get("packages") for result in results):
-		raise ValueError("no license packages in scanner output")
-	items = []
-	for result in results:
-		if Path(result["source"]["path"]).name != path_lock.name:
-			raise ValueError("scanner source does not match lockfile")
-		for entry in result["packages"]:
-			package = entry["package"]
-			name, version = package["name"], package["version"]
-			key = (name, version)
-			if (registry is None and (name.lower().replace("_", "-"), version) not in pinned) or (
-				registry is not None and key not in registry):
-				unscanned = True
-				continue
-			licenses = entry.get("licenses")
-			if licenses is not None and (not isinstance(licenses, list) or
-				any(value is not None and not isinstance(value, str) for value in licenses)):
-				raise ValueError("invalid license list")
-			licenses = licenses or [None]
-			severity = max((classifySpdxLicense(value) for value in licenses),
-				key={None: 0, "unknown": 1, "medium": 2, "high": 3}.get)
-			if severity:
-				items.append(makeFinding("osv-scanner-license", f"LICENSE:{name}:{version}",
-					"license", package=name, installed=version, severity=severity,
-					location=path_lock.name, owasp=[], confidence="low" if severity == "unknown" else "high",
-					summary=(f"{name} {version}: needs manual license review" if severity == "unknown"
-						else f"{name} {version}: {severity} copyleft license ({', '.join(map(str, licenses))})")))
-	return items, ("unpinned or local dependency, license not scanned" if registry is None
-		else "local package, license not scanned") if unscanned else None
-
-
-def normalizeLicenseRecord(content: str, meta: dict, root: str, path_stdout: Path) -> tuple:
-	stderr_scan = path_stdout.with_name("stderr.txt").read_text(encoding="utf-8")
-	if meta.get("exit_code") not in (0, 1) or re.search(
-		r"error|fail|timeout|network|retrieve|deps\.dev", stderr_scan, re.IGNORECASE
-	):
-		return [], "inconclusive", "license lookup unavailable (deps.dev/network)"
-	if not content.strip():
-		raise ValueError("empty scanner output")
-	name_lock = meta["command"][4]
-	if Path(name_lock).name != name_lock:
-		raise ValueError("unsafe lockfile path")
-	path_lock = Path(root) / meta["path"] / name_lock
-	if not path_lock.is_file() or path_lock.is_symlink():
-		return [], "inconclusive", "original lockfile unavailable for local-package filtering"
-	if name_lock not in {"Cargo.lock", "package-lock.json", "npm-shrinkwrap.json"} and not \
-			re.fullmatch(r"requirements.*\.txt", name_lock):
-		json.loads(content)
-		return [], "inconclusive", "license scanning not supported for this lockfile"
-	try:
-		findings, reason = parseOsvScannerLicense(content, path_lock)
-	except UnsupportedLockfileError as error_provenance:
-		return [], "inconclusive", f"license scanning not supported for this lockfile: {error_provenance}"
-	return findings, "inconclusive" if reason else "findings" if findings else "clean", reason
-
-
-def parseRuntimeVersions(content: str) -> list[dict]:
-	data_runtime = json.loads(content)
-	return [
-		makeFinding(
-			"runtime-versions", item["id"], "runtime", package=item["runtime"],
-			installed=item["version"], fixed=item["fixed"], severity=item["severity"],
-			location=item["location"], line=item["line"], summary=item["summary"],
-			references=item["references"], aliases=item["aliases"],
-			confidence=item["confidence"], owasp=["A03"],
-		)
-		for item in data_runtime["findings"]
-	]
-
-
-def normalizeRuntimeRecord(content: str) -> tuple:
-	"""Findings win; feed errors beat clean; every open item stays visible in the reason."""
-	data_runtime = json.loads(content)
-	findings = parseRuntimeVersions(content)
-	notes = [f"feed error: {error}" for error in data_runtime["errors"]]
-	if data_runtime["unparsed"]:
-		notes.append("unparsed advisory entries: " + ", ".join(data_runtime["unparsed"]))
-	notes.extend(
-		f"{item['file']}: {item['reason']}" for item in data_runtime["inconclusive"]
-	)
-	reason = "; ".join(notes) or None
-	if findings:
-		return findings, "findings", reason
-	if data_runtime["errors"]:
-		return [], "failed", reason
-	return [], "inconclusive" if notes else "clean", reason
-
-
-def normalizeSemgrepOwasp(labels_owasp, values_cwe) -> tuple[list[str], bool]:
-	categories = []
-	ambiguous = False
-	for label in labels_owasp or ():
-		match_label = re.search(r"(A(?:0[1-9]|10))(?::(2021|2025))?", str(label))
-		if not match_label:
-			continue
-		category, year_category = match_label.groups()
-		if year_category == "2021":
-			category = OWASP_2021[category]
-		elif year_category is None:
-			if any(str(value).upper() in {"CWE-77", "CWE-78", "CWE-79", "CWE-89", "CWE-94", "CWE-95"} for value in values_cwe or ()):
-				category = "A05"
-			else:
-				ambiguous = True
-		categories.append(category)
-	return sorted(set(categories)), ambiguous
-
-
-def parseSemgrep(content: str) -> list[dict]:
-	data = json.loads(content)
-	items = []
-	for result in data["results"]:
-		extra = result.get("extra", {})
-		metadata = extra.get("metadata") or {}
-		values_cwe = metadata.get("cwe") or []
-		if isinstance(values_cwe, str):
-			values_cwe = [values_cwe]
-		values_owasp = metadata.get("owasp") or []
-		if isinstance(values_owasp, str):
-			values_owasp = [values_owasp]
-		categories, ambiguous = normalizeSemgrepOwasp(values_owasp, values_cwe)
-		content_lines = extra.get("lines")
-		item = makeFinding(
-			"semgrep", result["check_id"], "code", severity=extra.get("severity"),
-			location=result.get("path"), summary=extra.get("message"), cwe=values_cwe,
-			rule_id=result["check_id"], line=result.get("start", {}).get("line"),
-			confidence=metadata.get("confidence"),
-			snippet=None if content_lines == "requires login" else content_lines,
-			owasp=categories,
-		)
-		if content_lines == "requires login":
-			item["snippet_omitted_reason"] = (
-				"unauthenticated Semgrep CLI does not return source snippets"
-			)
-		if ambiguous:
-			item["owasp_normalization"] = "ambiguous"
-		items.append(item)
-	return items
-
-
-def parseGitleaks(content: str) -> list[dict]:
-	data = json.loads(content)
-	return [
-		makeFinding(
-			"gitleaks", leak["Fingerprint"], "secret", severity="high",
-			location=leak.get("File"), summary=leak.get("Description") or leak.get("RuleID"),
-			rule_id=leak.get("RuleID"), line=leak.get("StartLine"), snippet=leak.get("Secret"),
-			owasp=["A04"],
-		)
-		for leak in data
-	]
-
-
-def parseZizmor(content: str) -> list[dict]:
-	data = json.loads(content)
-	values = data.get("findings", []) if isinstance(data, dict) else data
-	items = []
-	for finding in values:
-		determinations = finding.get("determinations") or {}
-		location_data = (finding.get("locations") or [{}])[0]
-		concrete = location_data.get("concrete") or location_data
-		symbolic = location_data.get("symbolic") or {}
-		key_local = symbolic.get("key", {}).get("Local", {})
-		start_point = concrete.get("location", {}).get("start_point", {})
-		line = concrete.get("line")
-		if line is None and start_point.get("row") is not None:
-			line = start_point["row"] + 1
-		items.append(
-			makeFinding(
-				"zizmor", finding["ident"], "ci", severity=determinations.get("severity"),
-				location=concrete.get("path") or key_local.get("path") or key_local.get("verbatim_path") or ".github/workflows",
-				line=line, summary=finding.get("description") or finding.get("desc"),
-				references=[finding["url"]] if finding.get("url") else [],
-				rule_id=finding["ident"], confidence=determinations.get("confidence"),
-				owasp=["A03"],
-			)
-		)
-	return items
 
 
 PARSERS = {
@@ -882,94 +296,6 @@ def normalizeEvidence(
 	if errors_schema:
 		raise ValueError("normalized report schema mismatch:\n" + "\n".join(errors_schema))
 	return data_output
-
-
-def toSarif(data_report: dict) -> dict:
-	runs_sarif = []
-	for scanner in data_report["scanners"]:
-		findings_tool = [
-			finding for finding in data_report["findings"] if finding["source"] == scanner["tool"]
-		]
-		rules = []
-		results = []
-		seen_rules = set()
-		for finding in findings_tool:
-			rule_id = finding.get("rule_id") or finding["id"]
-			if rule_id not in seen_rules:
-				rules.append({"id": rule_id, "name": rule_id, "shortDescription": {"text": finding["summary"]}})
-				seen_rules.add(rule_id)
-			region = {}
-			if finding.get("line"):
-				region["startLine"] = finding["line"]
-			result_sarif = {
-				"ruleId": rule_id,
-				"kind": "fail",
-				"level": {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note", "unknown": "note"}[finding["normalized_severity"]],
-				"message": {"text": finding["summary"]},
-				"locations": [{"physicalLocation": {"artifactLocation": {"uri": finding["location"]}, "region": region}}],
-				"partialFingerprints": {"primaryLocationLineHash": finding["fingerprint"]},
-			}
-			if finding.get("verdict") == "rejected":
-				result_sarif["suppressions"] = [{
-					"kind": "external", "status": "accepted",
-					"justification": json.dumps(finding["verdict_evidence"], sort_keys=True),
-				}]
-			if finding.get("change") in ("new", "unchanged"):
-				result_sarif["baselineState"] = finding["change"]
-			results.append(result_sarif)
-		runs_sarif.append(
-			{
-				"tool": {"driver": {"name": scanner["tool"], "version": scanner.get("tool_version"), "rules": rules}},
-				"results": results,
-			}
-		)
-	return {"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json", "runs": runs_sarif}
-
-
-def getMarkdownRow(finding: dict) -> str:
-	fixed = ", ".join(finding.get("fixed_versions", [])) or "—"
-	place = finding.get("package") or finding.get("location") or "."
-	summary = finding["summary"].replace("|", "\\|").replace("\n", " ")
-	return f"| {finding['normalized_severity']} | {finding['id']} | {place} | {summary} | {fixed} |"
-
-
-def toMarkdown(data_report: dict) -> str:
-	counts = {severity: 0 for severity in SEVERITY_ORDER}
-	for finding in data_report["findings"]:
-		counts[finding["normalized_severity"]] += 1
-	lines = [
-		"# Security Scan Report", "", "## Executive Summary", "",
-		f"{len(data_report['findings'])} findings. " + ", ".join(f"{key}: {value}" for key, value in counts.items()),
-		"", "## Scope and Reproducibility", "", f"- Root: `{data_report['plan_root']}`",
-		f"- Generated: {data_report['generated_at']}", "", "## Scanner Status", "",
-		"| Scanner | Scope | State | Findings |", "| --- | --- | --- | ---: |",
-	]
-	for scanner in data_report["scanners"]:
-		lines.append(f"| {scanner['tool']} | {scanner['path']} | {scanner['state']} | {scanner['finding_count']} |")
-	lines.extend(["", "## Findings"])
-	groups_verdict = (
-		("Confirmed", "confirmed"),
-		("Needs validation", "needs_validation"),
-		("Unreviewed", None),
-	)
-	for heading_verdict, verdict in groups_verdict:
-		lines.extend(["", f"### {heading_verdict}", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
-		for finding in data_report["findings"]:
-			if finding.get("verdict") != verdict:
-				continue
-			lines.append(getMarkdownRow(finding))
-	lines.extend(["", "## OWASP 2025 Coverage", "", "| Category | State |", "| --- | --- |"])
-	for category, state in data_report["owasp_coverage"].items():
-		lines.append(f"| {category} | {state} |")
-	lines.extend(["", "## Reviewed False Positives", "", "### Rejected", "", "| Severity | ID | Package/location | Summary | Fixed |", "| --- | --- | --- | --- | --- |"])
-	for finding in data_report["findings"]:
-		if finding.get("verdict") != "rejected":
-			continue
-		lines.append(getMarkdownRow(finding))
-	lines.extend(["", "## Limitations", "", "Failed, skipped, and inconclusive scanners remain incomplete coverage."])
-	if any(finding.get("enrichment") for finding in data_report["findings"]):
-		lines.extend(["", "> This product uses data from the NVD API but is not endorsed or certified by the NVD."])
-	return "\n".join(lines) + "\n"
 
 
 def parseArguments() -> argparse.Namespace:
