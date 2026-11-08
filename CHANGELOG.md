@@ -7,8 +7,17 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added in Unreleased
+
+- The Markdown report adds a `Reason` column to the scanner table and a `Not Covered` section
+  listing skipped, inconclusive, and failed scanners and OWASP categories without coverage.
+
 ### Fixed
 
+- Each scanner reports only its own `finding_count`, so a clean project no longer inherits
+  the total of another project that runs the same tool.
+- SARIF output emits one run per tool instead of repeating every finding in each run of a tool
+  that scanned several projects.
 - A non-UTF-8 `requirements*.txt` marks its license record `inconclusive` instead of crashing
   the planner.
 - A string `cwe` value is kept as one entry instead of being split into characters.

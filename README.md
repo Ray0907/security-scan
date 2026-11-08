@@ -259,25 +259,37 @@ semgrep scan --config p/owasp-top-ten --validate --metrics=off
 security-scan/
 ├── .claude-plugin/plugin.json
 ├── .github/workflows/validate.yml
-├── docs/                       # Design documents
+├── docs/                       # Project constitution
 ├── schema/
 │   ├── run.schema.json
 │   ├── scan-plan.schema.json
 │   └── security-findings.schema.json
 ├── scripts/
 │   ├── check_runtime.py
-│   ├── normalize_findings.py
+│   ├── code_parsers.py         # Semgrep, Gitleaks, Zizmor parsers
+│   ├── dependency_parsers.py   # Package manager and OSV/Trivy parsers
+│   ├── finding_core.py         # Finding shape, severity, fingerprints
+│   ├── license_projects.py     # License scan planning
+│   ├── license_records.py      # License and runtime record normalization
+│   ├── normalize_findings.py   # Evidence to JSON, SARIF, or Markdown
 │   ├── redaction.py
+│   ├── report_output.py        # SARIF and Markdown rendering
 │   ├── run_plan.py
 │   ├── scan_plan.py
 │   ├── validate_report.py
-│   └── verdict_rules.py
+│   ├── verdict_rules.py
+│   └── workspace_patterns.py   # Node and pnpm workspace matching
 ├── tests/
 │   ├── fixtures/               # Minimal scanner output samples
+│   ├── normalize_base.py       # Shared normalizer test helpers
+│   ├── scan_plan_base.py       # Shared planner test helpers
 │   ├── test_check_runtime.py
 │   ├── test_normalize_findings.py
+│   ├── test_normalize_license.py
+│   ├── test_normalize_report.py
 │   ├── test_run_plan.py
 │   ├── test_scan_plan.py
+│   ├── test_scan_plan_workspace.py
 │   └── test_validate_report.py
 ├── references/
 │   ├── OWASP.md

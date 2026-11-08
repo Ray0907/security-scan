@@ -176,6 +176,7 @@ def normalizeEvidence(
 	data_run = json.loads((path_evidence / "run.json").read_text(encoding="utf-8"))
 	items_scanner = []
 	items_finding = []
+	fingerprints_by_scanner = []
 	for meta_record in data_run["records"]:
 		state_runner = meta_record["state"]
 		reason_scanner = meta_record.get("reason")
@@ -210,6 +211,7 @@ def normalizeEvidence(
 				if not Path(finding["location"]).is_absolute():
 					finding["location"] = f"{meta_record['path']}/{finding['location']}"
 					finding["fingerprint"] = getFingerprint(finding)
+		fingerprints_by_scanner.append({finding["fingerprint"] for finding in findings_scanner})
 		items_finding.extend(findings_scanner)
 		items_scanner.append(
 			{
@@ -276,10 +278,9 @@ def normalizeEvidence(
 			item["fingerprint"],
 		)
 	)
-	for scanner in items_scanner:
-		scanner["finding_count"] = sum(
-			1 for finding in items_finding if finding["source"] == scanner["tool"]
-		)
+	fingerprints_reported = {item["fingerprint"] for item in items_finding}
+	for scanner, fingerprints in zip(items_scanner, fingerprints_by_scanner):
+		scanner["finding_count"] = len(fingerprints & fingerprints_reported)
 	data_output = redactValue({
 		"schema_version": 1,
 		"generated_at": getTimestamp(),

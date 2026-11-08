@@ -93,6 +93,29 @@ class NormalizeTestBase(unittest.TestCase):
 		data_finding.update(data_verdict)
 		return path_evidence, path_verdicts, data_report
 
+	def makeMultiEvidence(self, records: list[tuple[str, str, str]]) -> Path:
+		path_evidence = self.path_root / "evidence-multi"
+		items_meta = []
+		for index, (tool_name, fixture_name, path_project) in enumerate(records, 1):
+			path_record = path_evidence / f"{index:02d}-test-root"
+			path_record.mkdir(parents=True)
+			content_fixture = (
+				self.path_fixtures / tool_name / f"{fixture_name}.{TOOLS_FIXTURE[tool_name]}"
+			).read_text(encoding="utf-8")
+			(path_record / "stdout.txt").write_text(content_fixture, encoding="utf-8")
+			data_meta = {
+				"plan_index": index, "kind": "dependency", "path": path_project,
+				"tool": tool_name, "tool_version": "fixture", "state": "ran", "reason": None,
+			}
+			(path_record / "meta.json").write_text(json.dumps(data_meta), encoding="utf-8")
+			items_meta.append(data_meta)
+		(path_evidence / "run.json").write_text(json.dumps({
+			"schema_version": 1, "plan_root": "/work/app",
+			"git": {"commit": "abc", "branch": "main", "dirty": False},
+			"records": items_meta,
+		}), encoding="utf-8")
+		return path_evidence
+
 	def makeLicenseEvidence(self, ecosystem: str, lockfile: str, content: str | None = None,
 			exit_code: int = 0, stderr: str = "") -> Path:
 		path_evidence = self.path_root / f"license-{ecosystem}-{len(list(self.path_root.iterdir()))}"

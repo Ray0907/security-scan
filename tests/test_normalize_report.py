@@ -140,6 +140,23 @@ class NormalizeReportTest(NormalizeTestBase):
 		findings.append({"owasp_2025": ["A05"]})
 		self.assertEqual("findings", getCoverage(scanners, findings)["A05"])
 
+	def testSameToolScannersKeepTheirOwnFindingCounts(self):
+		path_evidence = self.makeMultiEvidence(
+			[("npm", "findings", "web"), ("npm", "clean", "api")])
+		data_report = normalizeEvidence(path_evidence)
+		counts = {item["path"]: item["finding_count"] for item in data_report["scanners"]}
+		self.assertEqual(len(data_report["findings"]), counts["web"])
+		self.assertGreater(counts["web"], 0)
+		self.assertEqual(0, counts["api"])
+
+	def testSameToolScannersShareOneSarifRunWithoutDuplicates(self):
+		path_evidence = self.makeMultiEvidence(
+			[("npm", "findings", "web"), ("npm", "findings", "api")])
+		data_report = normalizeEvidence(path_evidence)
+		runs = toSarif(data_report)["runs"]
+		self.assertEqual(1, len(runs))
+		self.assertEqual(len(data_report["findings"]), len(runs[0]["results"]))
+
 	def testSarifContainsRequiredKeys(self):
 		report_scan = normalizeEvidence(self.makeEvidence("semgrep"))
 		data_sarif = toSarif(report_scan)
@@ -166,10 +183,25 @@ class NormalizeReportTest(NormalizeTestBase):
 
 		for heading_report in (
 			"Executive Summary", "Scope and Reproducibility", "Scanner Status",
-			"Findings", "OWASP 2025 Coverage", "Limitations",
+			"Findings", "OWASP 2025 Coverage", "Limitations", "Not Covered",
 		):
 			self.assertIn(f"## {heading_report}", content_markdown)
 		self.assertNotIn("not endorsed or certified by the NVD", content_markdown)
+
+	def testMarkdownShowsScannerReasonAndNotCoveredSection(self):
+		path_evidence = self.makeEvidence("npm")
+		path_run = path_evidence / "run.json"
+		data_run = json.loads(path_run.read_text(encoding="utf-8"))
+		data_run["records"][0].update(
+			state="skipped", reason="planner lockfile missing | run npm install")
+		path_run.write_text(json.dumps(data_run), encoding="utf-8")
+		content_markdown = toMarkdown(normalizeEvidence(path_evidence))
+		self.assertIn("| Scanner | Scope | State | Findings | Reason |", content_markdown)
+		self.assertIn("planner lockfile missing \\| run npm install", content_markdown)
+		section_not_covered = content_markdown.split("## Not Covered")[1]
+		self.assertIn("inconclusive", section_not_covered)
+		self.assertIn("A01", section_not_covered)
+		self.assertIn("says nothing about", section_not_covered)
 
 	def testSeverityAndOwaspFiltersApply(self):
 		report_scan = normalizeEvidence(

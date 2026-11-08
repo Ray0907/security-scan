@@ -8,7 +8,10 @@ except ModuleNotFoundError:
 
 def toSarif(data_report: dict) -> dict:
 	runs_sarif = []
+	scanner_by_tool = {}
 	for scanner in data_report["scanners"]:
+		scanner_by_tool.setdefault(scanner["tool"], scanner)
+	for scanner in scanner_by_tool.values():
 		findings_tool = [
 			finding for finding in data_report["findings"] if finding["source"] == scanner["tool"]
 		]
@@ -55,6 +58,28 @@ def getMarkdownRow(finding: dict) -> str:
 	return f"| {finding['normalized_severity']} | {finding['id']} | {place} | {summary} | {fixed} |"
 
 
+def escapeCell(value) -> str:
+	return str(value or "—").replace("|", "\\|").replace("\n", " ")
+
+
+def getNotCoveredLines(data_report: dict) -> list[str]:
+	lines = []
+	for scanner in data_report["scanners"]:
+		if scanner["state"] in ("skipped", "inconclusive", "failed"):
+			lines.append(
+				f"- {scanner['tool']} at `{scanner['path']}`: {scanner['state']}"
+				f" ({escapeCell(scanner['reason'])})"
+			)
+	for category, state in data_report["owasp_coverage"].items():
+		if state in ("not-scanned", "manual-review-needed"):
+			lines.append(f"- OWASP {category}: {state}")
+	lines.append(
+		"- Paths excluded and parts omitted by a scoped run are not recorded in the evidence."
+		" A scoped or partial scan says nothing about the omitted parts."
+	)
+	return lines
+
+
 def toMarkdown(data_report: dict) -> str:
 	counts = {severity: 0 for severity in SEVERITY_ORDER}
 	for finding in data_report["findings"]:
@@ -64,10 +89,13 @@ def toMarkdown(data_report: dict) -> str:
 		f"{len(data_report['findings'])} findings. " + ", ".join(f"{key}: {value}" for key, value in counts.items()),
 		"", "## Scope and Reproducibility", "", f"- Root: `{data_report['plan_root']}`",
 		f"- Generated: {data_report['generated_at']}", "", "## Scanner Status", "",
-		"| Scanner | Scope | State | Findings |", "| --- | --- | --- | ---: |",
+		"| Scanner | Scope | State | Findings | Reason |", "| --- | --- | --- | ---: | --- |",
 	]
 	for scanner in data_report["scanners"]:
-		lines.append(f"| {scanner['tool']} | {scanner['path']} | {scanner['state']} | {scanner['finding_count']} |")
+		lines.append(
+			f"| {scanner['tool']} | {scanner['path']} | {scanner['state']} |"
+			f" {scanner['finding_count']} | {escapeCell(scanner['reason'])} |"
+		)
 	lines.extend(["", "## Findings"])
 	groups_verdict = (
 		("Confirmed", "confirmed"),
@@ -89,6 +117,7 @@ def toMarkdown(data_report: dict) -> str:
 			continue
 		lines.append(getMarkdownRow(finding))
 	lines.extend(["", "## Limitations", "", "Failed, skipped, and inconclusive scanners remain incomplete coverage."])
+	lines.extend(["", "## Not Covered", "", *getNotCoveredLines(data_report)])
 	if any(finding.get("enrichment") for finding in data_report["findings"]):
 		lines.extend(["", "> This product uses data from the NVD API but is not endorsed or certified by the NVD."])
 	return "\n".join(lines) + "\n"
