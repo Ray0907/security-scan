@@ -64,6 +64,11 @@ class NormalizeFindingsTest(NormalizeTestBase):
 			"justification": json.dumps(data_finding["verdict_evidence"], sort_keys=True),
 		}], data_result["suppressions"])
 
+	def testStringCweStaysOneEntry(self):
+		from scripts.normalize_findings import makeFinding
+		finding = makeFinding("npm", "X", "dependency", package="p", cwe="CWE-79")
+		self.assertEqual(["CWE-79"], finding["cwe"])
+
 	def testCliJsonAndMarkdownKeepWeakRejectedVerdictOutput(self):
 		path_evidence, path_verdicts, _ = self.makeRejectedEvidence()
 		path_script = Path(__file__).parents[1] / "scripts/normalize_findings.py"

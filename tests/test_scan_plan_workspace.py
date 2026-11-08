@@ -467,6 +467,15 @@ class ScanPlanWorkspaceTest(ScanPlanTestBase):
 		self.assertIsNone(license_item["command"])
 		self.assertIn("license not scanned", license_item["reason"])
 
+	def testMarksNonUtf8RequirementsLicenseInconclusive(self):
+		self.writeFile("requirements.txt")
+		(self.path_root / "requirements.txt").write_bytes("flask==3.0.0\n".encode("utf-16"))
+		license_item = next(item for item in buildScanPlan(self.path_root)["projects"]
+			if item["kind"] == "license")
+		self.assertEqual("inconclusive", license_item["status"])
+		self.assertIsNone(license_item["command"])
+		self.assertIn("unreadable", license_item["reason"])
+
 	def testPlansUnsupportedAndMissingLicenseCoverage(self):
 		self.writeFile("go/go.mod", "module example.org/app\n")
 		self.writeFile("node/package.json", '{}')

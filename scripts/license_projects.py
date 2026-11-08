@@ -42,11 +42,16 @@ def getLicenseProjects(item_project: dict, path_project: Path, names_file: set[s
 			item_license.update(status="inconclusive", command=None,
 				reason="symlinked lockfile, license not scanned")
 		elif kind_project == "python" and re.fullmatch(r"requirements.*\.txt", name_lock):
-			lines_lock = path_lock.read_text(encoding="utf-8").splitlines()
-			if any(line.strip() and not line.lstrip().startswith("#")
-				and not re.fullmatch(r"\s*[a-zA-Z0-9_.-]+==[^\s;]+.*", line)
-				for line in lines_lock):
+			try:
+				lines_lock = path_lock.read_text(encoding="utf-8").splitlines()
+			except (OSError, UnicodeError):
 				item_license.update(status="inconclusive", command=None,
-					reason="unpinned or local dependency, license not scanned")
+					reason="lockfile unreadable as UTF-8, license not scanned")
+			else:
+				if any(line.strip() and not line.lstrip().startswith("#")
+					and not re.fullmatch(r"\s*[a-zA-Z0-9_.-]+==[^\s;]+.*", line)
+					for line in lines_lock):
+					item_license.update(status="inconclusive", command=None,
+						reason="unpinned or local dependency, license not scanned")
 		items_license.append(item_license)
 	return items_license

@@ -99,7 +99,7 @@ def makeFinding(
 		"location": location,
 		"summary": summary or identifier,
 		"references": list(references or ()),
-		"cwe": list(cwe or ()),
+		"cwe": [cwe] if isinstance(cwe, str) else list(cwe or ()),
 		"rule_id": rule_id,
 		"line": line,
 		"confidence": str(confidence).lower() if confidence else "unknown",

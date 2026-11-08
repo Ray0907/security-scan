@@ -7,6 +7,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A non-UTF-8 `requirements*.txt` marks its license record `inconclusive` instead of crashing
+  the planner.
+- A string `cwe` value is kept as one entry instead of being split into characters.
+
 ## [1.8.0] - 2026-10-27
 
 ### Added in 1.8.0
@@ -120,7 +126,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/Ray0907/security-scan/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Ray0907/security-scan/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/Ray0907/security-scan/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Ray0907/security-scan/compare/v1.4.0...v1.5.0
