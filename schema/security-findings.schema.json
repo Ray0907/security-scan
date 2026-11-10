@@ -111,6 +111,9 @@
               }
             ]
           },
+          "note": {
+            "type": "string"
+          },
           "finding_count": {
             "type": "integer"
           }

@@ -72,6 +72,10 @@ def getNotCoveredLines(data_report: dict) -> list[str]:
 				f"- {scanner['tool']} at `{scanner['path']}`: {scanner['state']}"
 				f" ({escapeCell(scanner['reason'])})"
 			)
+		if scanner.get("note"):
+			lines.append(
+				f"- {scanner['tool']} at `{scanner['path']}`: {escapeCell(scanner['note'])}"
+			)
 	for category, state in data_report["owasp_coverage"].items():
 		if state in ("not-scanned", "manual-review-needed"):
 			lines.append(f"- OWASP {category}: {state}")

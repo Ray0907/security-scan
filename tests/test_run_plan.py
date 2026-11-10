@@ -165,7 +165,8 @@ class RunPlanTest(unittest.TestCase):
 		run_mock.return_value = subprocess.CompletedProcess([], 0, stdout="cargo-audit 0.22\n", stderr="")
 		self.assertEqual("cargo-audit 0.22", getToolVersion(["cargo", "audit", "--version"]))
 		run_mock.assert_called_once_with(
-			["cargo", "audit", "--version"], capture_output=True, text=True, timeout=30, check=False,
+			["cargo", "audit", "--version"], cwd=tempfile.gettempdir(),
+			capture_output=True, text=True, timeout=30, check=False,
 		)
 
 	@patch("scripts.run_plan.getGitMetadata", return_value={"commit": None, "branch": None, "dirty": None})

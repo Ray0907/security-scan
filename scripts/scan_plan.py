@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 try:
 	from scripts.check_runtime import getDeclarations
 	from scripts.license_projects import getLicenseProjects
+	from scripts.repository_config import addSuppressionNote, guardRepositoryCommand
 	from scripts.workspace_patterns import (
 		getPackageWorkspacePatterns,
 		getPnpmWorkspacePatterns,
@@ -19,6 +20,7 @@ try:
 except ModuleNotFoundError:
 	from check_runtime import getDeclarations
 	from license_projects import getLicenseProjects
+	from repository_config import addSuppressionNote, guardRepositoryCommand
 	from workspace_patterns import (
 		getPackageWorkspacePatterns,
 		getPnpmWorkspacePatterns,
@@ -265,7 +267,7 @@ def getIacEvidence(path_project: Path, names_file: set[str]) -> list[str]:
 			name_file,
 		):
 			names_evidence.append(name_file)
-		elif name_file.endswith((".yml", ".yaml")):
+		elif name_file.endswith((".yml", ".yaml")) and not (path_project / name_file).is_symlink():
 			try:
 				content_file = (path_project / name_file).read_bytes()[:4096].decode(
 					"utf-8", errors="ignore"
@@ -361,7 +363,7 @@ def getProjects(path_project: Path, names_file: set[str], path_root: Path) -> li
 				"path": getRelativePath(path_project, path_root),
 				"tool": "composer",
 				"status": "ready",
-				"command": ["composer", "audit", "--locked", "--format=json"],
+				"command": ["composer", "audit", "--locked", "--format=json", "--no-plugins", "--no-scripts"],
 			}
 		)
 	if "Gemfile.lock" in names_file:
@@ -436,6 +438,7 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 	names_excluded = sorted({PurePosixPath(name).as_posix() for name in names_excluded or ()})
 	paths_excluded = tuple(PurePosixPath(name) for name in names_excluded)
 	items_project = []
+	files_by_directory = {}
 	has_ci_workflows = False
 
 	def isExcluded(path_project: Path) -> bool:
@@ -456,6 +459,9 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 			if name_dir not in NAMES_SKIPPED and not isExcluded(path_project / name_dir)
 		)
 		set_names_file = set(names_file)
+		files_by_directory[path_project] = set_names_file | {
+			name for name in names_dir if (path_project / name).is_symlink()
+		}
 		if getRelativePath(path_project, path_resolved) == ".github/workflows" and any(
 			name_file.endswith((".yml", ".yaml")) for name_file in names_file
 		):
@@ -507,7 +513,7 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 	for item_project in list(items_project):
 		items_project.extend(getLicenseProjects(
 			item_project, path_resolved / item_project["path"],
-			{path_file.name for path_file in (path_resolved / item_project["path"]).iterdir()}
+			files_by_directory[path_resolved / item_project["path"]]
 		))
 	for item_project in items_project:
 		item_project.pop("_workspace_patterns", None)
@@ -541,6 +547,10 @@ def buildScanPlan(path_root: Path, names_excluded: list[str] | None = None) -> d
 				],
 			}
 		)
+	for item_project in items_project:
+		path_project = path_resolved / item_project["path"]
+		guardRepositoryCommand(item_project, path_project, path_resolved)
+		addSuppressionNote(item_project, files_by_directory.get(path_project, set()))
 	items_project.sort(key=lambda item_project: (item_project["path"], item_project["kind"]))
 	return {
 		"schema_version": 2,

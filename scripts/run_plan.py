@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -14,8 +15,10 @@ from pathlib import Path
 
 try:
 	from scripts.redaction import redactText
+	from scripts.repository_config import addSuppressionNote
 except ModuleNotFoundError:
 	from redaction import redactText
+	from repository_config import addSuppressionNote
 
 
 def getTimestamp() -> str:
@@ -52,6 +55,7 @@ def getToolVersion(command_version: list[str]) -> str | None:
 	try:
 		result_version = subprocess.run(
 			command_version,
+			cwd=tempfile.gettempdir(),
 			capture_output=True,
 			text=True,
 			timeout=30,
@@ -202,6 +206,8 @@ def runRecord(record: dict, timeout_seconds: int, patterns_redact: list[str] | N
 		"reason": result_run["reason"],
 		"redactions": count_stdout + count_stderr,
 	}
+	if item_plan.get("note") is not None:
+		meta_record["note"] = item_plan["note"]
 	path_record = record["path_record"]
 	(path_record / "stdout.txt").write_text(stdout_record, encoding="utf-8")
 	(path_record / "stderr.txt").write_text(stderr_record, encoding="utf-8")
@@ -283,7 +289,9 @@ def runPlan(
 	set_skip = set(kinds_skip or ())
 	items_plan = list(plan_scan["projects"])
 	if semgrep:
-		items_plan.append(buildSemgrepItem())
+		item_semgrep = buildSemgrepItem()
+		addSuppressionNote(item_semgrep, {path_file.name for path_file in path_root.iterdir()})
+		items_plan.append(item_semgrep)
 
 	records_prepared = prepareAllRecords(
 		items_plan, path_root, path_out, set_only, set_skip, versions_tool

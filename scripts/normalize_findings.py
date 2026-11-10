@@ -227,6 +227,7 @@ def normalizeEvidence(
 				"tool": meta_record["tool"], "tool_version": meta_record.get("tool_version"),
 				"state": state_scanner, "reason": reason_scanner,
 				"finding_count": len(findings_scanner),
+				**({"note": meta_record["note"]} if "note" in meta_record else {}),
 			}
 		)
 

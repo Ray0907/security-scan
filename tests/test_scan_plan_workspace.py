@@ -402,7 +402,7 @@ class ScanPlanWorkspaceTest(ScanPlanTestBase):
 		project_php = self.getProject(plan_scan, "php")
 
 		self.assertEqual(
-			["composer", "audit", "--locked", "--format=json"],
+			["composer", "audit", "--locked", "--format=json", "--no-plugins", "--no-scripts"],
 			project_php["command"],
 		)
 

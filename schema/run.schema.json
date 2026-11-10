@@ -142,6 +142,9 @@
               }
             ]
           },
+          "note": {
+            "type": "string"
+          },
           "redactions": {
             "type": "integer"
           }

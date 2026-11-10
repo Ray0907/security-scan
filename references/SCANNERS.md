@@ -41,13 +41,49 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 | Lockfile fallback | uv, Poetry, Pipenv, Dart, Elixir, Swift, .NET, Deno | `osv-scanner scan source --lockfile <file> --format json` |
 | Go | `go.mod` | `govulncheck -json ./...` |
 | Rust | `Cargo.lock` | `cargo audit --json` |
-| PHP | `composer.lock` | `composer audit --locked --format=json` |
+| PHP | `composer.lock` | `composer audit --locked --format=json --no-plugins --no-scripts` |
 | Ruby | `Gemfile.lock` | `bundle-audit check --format json` |
 | Java fallback | Maven or Gradle manifest | `trivy fs --format json --scanners vuln .` |
 | Container | `Dockerfile*` or `Containerfile*` | `trivy fs --format json --scanners misconfig .` |
 | Infrastructure as code | Terraform, Compose, or Kubernetes YAML | `trivy fs --format json --scanners misconfig .` |
 | Filesystem secrets | Repository root | `gitleaks dir . --no-banner --redact --report-format json --report-path -` |
 | GitHub Actions | `.github/workflows/*.yml` | `zizmor --format json --offline .github/workflows` |
+
+### Repository-controlled configuration
+
+The planner fails closed on repository execution configuration rather than parsing YAML/TOML:
+
+- `.yarnrc.yml` permits only plain alphanumeric top-level keys and their indented children
+  (plus comments, blanks, and an optional initial `---`). It blocks `yarnPath`/`plugins`
+  anywhere, quoted keys, backslashes, anchors, aliases, tags, merge keys, flow collections at
+  line starts, and further document markers. `.yarnrc` blocks `yarn-path` or any backslash.
+- `.cargo/config.toml` and `.cargo/config` block any `audit` substring or `\\u`/`\\U` escape.
+- `rust-toolchain.toml` and `rust-toolchain` block `path`, `/`, or any backslash. Ordinary
+  release-channel pins and legacy `stable` toolchains remain eligible.
+
+Substring checks are case-insensitive and include comments, so harmless configurations can also
+be inconclusive. Checks include project ancestors through the scan root, not directories above
+it. Symlinked or unreadable execution configs are inconclusive; config symlinks are not read.
+OSV license scans do not invoke Yarn or Cargo and are not blocked by these execution guards.
+Composer audits disable plugins and scripts with `--no-plugins --no-scripts`. Version probes run
+in `tempfile.gettempdir()`, not the repository cwd.
+
+**Not covered:** pnpm `.pnpmfile.cjs`/configuration, Go cgo directives, Corepack `packageManager`
+URLs, and Bundler configuration are not inspected by this guard. Neither are environment/global
+configuration or changes after planning; this guard is not a sandbox.
+
+These suppression files are surfaced as notes and evidence, without blocking scans:
+
+| Tool | Directory | Files confirmed by installed tool help |
+| --- | --- | --- |
+| Gitleaks | scan root | `.gitleaksignore`, `.gitleaks.toml` (`gitleaks --help`) |
+| Trivy | project directory | `.trivyignore`, `trivy.yaml` (`trivy fs --help`) |
+| Semgrep (`--semgrep`) | scan root | `.semgrepignore` (`semgrep scan --help`) |
+
+Existing notes are retained. Notes reach run metadata, normalized scanner entries, and the
+Markdown **Not Covered** section, even when a scanner is clean or has another reason. A clean
+result with repository suppression configuration may omit findings. Other tools' default
+suppression filenames have not been confirmed from local help and are not detected here.
 
 Schema v2 always includes one root-level gitleaks record. Planner exclusions do not apply inside
 gitleaks; use `.gitleaksignore` or tool configuration. Zizmor runs offline audits only, and IaC
