@@ -216,6 +216,9 @@ A Dockerfile or Containerfile alone is not an image vulnerability inventory. Ima
 requires an existing image supplied by the user; this skill does not build untrusted repositories
 during a scan.
 
+License checks run for npm, Cargo, and `requirements*.txt` lockfiles. Other lockfiles get an
+`inconclusive` license record with no command.
+
 ## How It Works
 
 1. `scripts/scan_plan.py` recursively inventories supported projects and emits a JSON execution
@@ -284,10 +287,12 @@ security-scan/
 │   ├── normalize_base.py       # Shared normalizer test helpers
 │   ├── scan_plan_base.py       # Shared planner test helpers
 │   ├── test_check_runtime.py
+│   ├── test_license_unsupported_lockfiles.py
 │   ├── test_normalize_findings.py
 │   ├── test_normalize_license.py
 │   ├── test_normalize_report.py
 │   ├── test_run_plan.py
+│   ├── test_sarif_osv_location.py
 │   ├── test_scan_plan.py
 │   ├── test_scan_plan_workspace.py
 │   └── test_validate_report.py

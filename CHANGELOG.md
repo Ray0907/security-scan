@@ -7,6 +7,18 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-11
+
+### Fixed in 1.10.0
+
+- SARIF omits scanners without a tool and null driver versions, and uses the first available
+  tool version across scanner records.
+- OSV locations inside the scan root become root-relative before fingerprinting, without
+  double-prefixing subprojects or rewriting paths outside the root. **Baseline-affecting:**
+  existing OSV findings with these absolute locations get new fingerprints once.
+- License planning marks pnpm, yarn, bun, uv, poetry, pipenv, and pylock lockfiles
+  `inconclusive` without a command; npm, Cargo, and `requirements*.txt` remain supported.
+
 ## [1.9.0] - 2026-11-08
 
 ### Added in 1.9.0
@@ -144,7 +156,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/Ray0907/security-scan/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/Ray0907/security-scan/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/Ray0907/security-scan/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Ray0907/security-scan/compare/v1.6.0...v1.7.0

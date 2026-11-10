@@ -206,11 +206,19 @@ def normalizeEvidence(
 				IndexError, json.JSONDecodeError) as error_parse:
 				state_scanner = "failed"
 				reason_scanner = f"invalid scanner output: {error_parse}"
-		if meta_record["path"] != ".":
-			for finding in findings_scanner:
-				if not Path(finding["location"]).is_absolute():
-					finding["location"] = f"{meta_record['path']}/{finding['location']}"
-					finding["fingerprint"] = getFingerprint(finding)
+		for finding in findings_scanner:
+			path_location = Path(finding["location"])
+			if meta_record["tool"] == "osv-scanner" and path_location.is_absolute():
+				try:
+					finding["location"] = path_location.resolve().relative_to(
+						Path(data_run["plan_root"]).resolve()).as_posix()
+				except (ValueError, OSError, RuntimeError):
+					continue
+			elif meta_record["path"] != "." and not path_location.is_absolute():
+				finding["location"] = f"{meta_record['path']}/{finding['location']}"
+			else:
+				continue
+			finding["fingerprint"] = getFingerprint(finding)
 		fingerprints_by_scanner.append({finding["fingerprint"] for finding in findings_scanner})
 		items_finding.extend(findings_scanner)
 		items_scanner.append(

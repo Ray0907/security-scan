@@ -41,6 +41,10 @@ def getLicenseProjects(item_project: dict, path_project: Path, names_file: set[s
 		if path_lock.is_symlink():
 			item_license.update(status="inconclusive", command=None,
 				reason="symlinked lockfile, license not scanned")
+		elif name_lock not in {"Cargo.lock", "package-lock.json", "npm-shrinkwrap.json"} and not \
+				re.fullmatch(r"requirements.*\.txt", name_lock):
+			item_license.update(status="inconclusive", command=None,
+				reason="license scanning not supported for this lockfile")
 		elif kind_project == "python" and re.fullmatch(r"requirements.*\.txt", name_lock):
 			try:
 				lines_lock = path_lock.read_text(encoding="utf-8").splitlines()

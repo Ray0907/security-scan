@@ -261,7 +261,7 @@
         }
       ],
       "source": {
-        "path": "/private/tmp/claude-501/-private-tmp-security-scan/8ab28d90-a626-4715-b3a2-bcbd76b03742/scratchpad/sample/uvapp/uv.lock",
+        "path": "/home/user/project/uvapp/uv.lock",
         "type": "lockfile"
       }
     }

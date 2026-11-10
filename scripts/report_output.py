@@ -10,7 +10,11 @@ def toSarif(data_report: dict) -> dict:
 	runs_sarif = []
 	scanner_by_tool = {}
 	for scanner in data_report["scanners"]:
-		scanner_by_tool.setdefault(scanner["tool"], scanner)
+		if scanner["tool"] is None:
+			continue
+		scanner_first = scanner_by_tool.setdefault(scanner["tool"], scanner)
+		if scanner_first.get("tool_version") is None and scanner.get("tool_version") is not None:
+			scanner_by_tool[scanner["tool"]] = scanner
 	for scanner in scanner_by_tool.values():
 		findings_tool = [
 			finding for finding in data_report["findings"] if finding["source"] == scanner["tool"]
@@ -42,12 +46,10 @@ def toSarif(data_report: dict) -> dict:
 			if finding.get("change") in ("new", "unchanged"):
 				result_sarif["baselineState"] = finding["change"]
 			results.append(result_sarif)
-		runs_sarif.append(
-			{
-				"tool": {"driver": {"name": scanner["tool"], "version": scanner.get("tool_version"), "rules": rules}},
-				"results": results,
-			}
-		)
+		driver = {"name": scanner["tool"], "rules": rules}
+		if scanner.get("tool_version") is not None:
+			driver["version"] = scanner["tool_version"]
+		runs_sarif.append({"tool": {"driver": driver}, "results": results})
 	return {"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json", "runs": runs_sarif}
 
 
