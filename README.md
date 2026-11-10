@@ -27,6 +27,12 @@ Scanning is read-only by default. The skill does not install tools, update depen
 project scripts, build images, or change global agent settings without explicit approval. Missing
 or failed scanners are reported as incomplete coverage, never as a clean result.
 
+The scanned repository is treated as untrusted. When a repository config could make a scanner run
+repository code (for example Yarn `yarnPath` or `plugins`, a Cargo `audit` alias, or a
+`rust-toolchain` path), the planner marks that record `inconclusive` instead of running it.
+Repository ignore files for Gitleaks, Trivy, and Semgrep are listed in the report. See
+[`references/SCANNERS.md`](references/SCANNERS.md) for the exact rules and what is not covered.
+
 ## Installation
 
 With the [Skills CLI](https://skills.sh), which installs into any supported coding agent:
@@ -276,6 +282,7 @@ security-scan/
 │   ├── license_records.py      # License and runtime record normalization
 │   ├── normalize_findings.py   # Evidence to JSON, SARIF, or Markdown
 │   ├── redaction.py
+│   ├── repository_config.py    # Fail-closed checks on repository tool config
 │   ├── report_output.py        # SARIF and Markdown rendering
 │   ├── run_plan.py
 │   ├── scan_plan.py
@@ -291,6 +298,8 @@ security-scan/
 │   ├── test_normalize_findings.py
 │   ├── test_normalize_license.py
 │   ├── test_normalize_report.py
+│   ├── test_redaction_json.py
+│   ├── test_repository_config.py
 │   ├── test_run_plan.py
 │   ├── test_sarif_osv_location.py
 │   ├── test_scan_plan.py

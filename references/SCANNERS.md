@@ -56,8 +56,10 @@ The planner fails closed on repository execution configuration rather than parsi
 - `.yarnrc.yml` permits only plain alphanumeric top-level keys and their indented children
   (plus comments, blanks, and an optional initial `---`). It blocks `yarnPath`/`plugins`
   anywhere, quoted keys, backslashes, anchors, aliases, tags, merge keys, flow collections at
-  line starts, and further document markers. `.yarnrc` blocks `yarn-path` or any backslash.
-- `.cargo/config.toml` and `.cargo/config` block any `audit` substring or `\\u`/`\\U` escape.
+  line starts, and further document markers. `.yarnrc` blocks `yarn-path`, `yarnPath`, or any
+  backslash.
+- `.cargo/config.toml` and `.cargo/config` block any `audit` or `include`
+  substring or `\\u`/`\\U` escape.
 - `rust-toolchain.toml` and `rust-toolchain` block `path`, `/`, or any backslash. Ordinary
   release-channel pins and legacy `stable` toolchains remain eligible.
 

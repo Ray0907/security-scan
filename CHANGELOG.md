@@ -7,6 +7,30 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-11
+
+### Added in 1.11.0
+
+- The planner marks Yarn, Cargo, and rustup records `inconclusive` with no command when a
+  repository config in the project or an ancestor up to the scan root could run repository code
+  (`yarnPath`, `plugins`, `yarn-path`, Cargo `audit` aliases or `include`, `rust-toolchain`
+  `path`) or cannot be proven plain. See `references/SCANNERS.md` for the rules and limits.
+- Gitleaks, Trivy, and Semgrep ignore or config files in the repository are recorded in the plan
+  `note` and `evidence`, carried into `run.json` and the report's scanner entry (new optional
+  `note` field), and listed in the Markdown report.
+
+### Changed in 1.11.0
+
+- `composer audit` runs with `--no-plugins --no-scripts`.
+- Tool version probes run in the system temporary directory instead of the current directory.
+- Some Yarn Berry projects that commit `yarnPath` become `inconclusive` instead of scanned.
+
+### Fixed in 1.11.0
+
+- Secrets written with a JSON-escaped quote (`password = \"value\"`) are redacted in saved
+  evidence, and keyword redaction no longer corrupts valid scanner JSON in those cases.
+- Private-key redaction runs in linear time on output with many unterminated `BEGIN` headers.
+
 ## [1.10.0] - 2026-11-11
 
 ### Fixed in 1.10.0
@@ -156,7 +180,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial release.
 
-[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/Ray0907/security-scan/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/Ray0907/security-scan/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/Ray0907/security-scan/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/Ray0907/security-scan/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/Ray0907/security-scan/compare/v1.7.0...v1.8.0
