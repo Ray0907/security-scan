@@ -54,21 +54,26 @@ replace the planner's package-manager choice with an `npm || yarn || pnpm` fallb
 The planner fails closed on repository execution configuration rather than parsing YAML/TOML:
 
 - `.yarnrc.yml` permits only plain alphanumeric top-level keys and their indented children
-  (plus comments, blanks, and an optional initial `---`). It blocks `yarnPath`/`plugins`
-  anywhere, quoted keys, backslashes, anchors, aliases, tags, merge keys, flow collections at
-  line starts, and further document markers. `.yarnrc` blocks `yarn-path`, `yarnPath`, or any
-  backslash.
+  (plus comments, blanks, and an optional initial `---`). It blocks `yarnPath`, `plugins`,
+  `injectEnvironmentFiles`, or `.env` anywhere, quoted keys, backslashes, anchors, aliases,
+  tags, merge keys, flow collections at line starts, and further document markers. `.yarnrc`
+  blocks `yarn-path`, `yarnPath`, or any backslash. Any `.env.yarn` entry (including a directory
+  or symlink) blocks Yarn without reading the entry.
 - `.cargo/config.toml` and `.cargo/config` block any `audit` or `include`
   substring or `\\u`/`\\U` escape.
 - `rust-toolchain.toml` and `rust-toolchain` block `path`, `/`, or any backslash. Ordinary
   release-channel pins and legacy `stable` toolchains remain eligible.
 
 Substring checks are case-insensitive and include comments, so harmless configurations can also
-be inconclusive. Checks include project ancestors through the scan root, not directories above
-it. Symlinked or unreadable execution configs are inconclusive; config symlinks are not read.
+be inconclusive. Execution-config checks include the project directory and every ancestor up to
+and including the filesystem root, even above the scan root. Only the directory equal to
+`Path.home().resolve()` is skipped (falling back to `Path.home()` if resolution fails): the user's
+own global config is trusted, but its descendants and ancestors are still checked. Suppression-file detection retains its existing scan-root/project
+scope. Symlinked or unreadable execution configs are inconclusive; config symlinks are not read.
 OSV license scans do not invoke Yarn or Cargo and are not blocked by these execution guards.
 Composer audits disable plugins and scripts with `--no-plugins --no-scripts`. Version probes run
-in `tempfile.gettempdir()`, not the repository cwd.
+in `Path.home()`, not the repository cwd or shared temporary directories, because Yarn and Cargo
+read ancestor configs. The home directory and its ancestors are assumed to be user- or root-owned.
 
 **Not covered:** pnpm `.pnpmfile.cjs`/configuration, Go cgo directives, Corepack `packageManager`
 URLs, and Bundler configuration are not inspected by this guard. Neither are environment/global

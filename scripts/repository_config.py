@@ -24,7 +24,8 @@ def addSuppressionNote(item_project: dict, names_file: set[str]) -> None:
 
 
 def isPlainYarnConfig(content_config: str) -> bool:
-	if re.search(r"""yarnPath|plugins|[\\&*!]|<<|["'][^\n]*?["'][ \t]*:""",
+	if re.search(r"""yarnPath|plugins|injectEnvironmentFiles|\.env|[\\&*!]|<<|"""
+		r"""["'][^\n]*?["'][ \t]*:""",
 		content_config, re.IGNORECASE):
 		return False
 	lines_config = [line for line in content_config.splitlines()
@@ -43,19 +44,26 @@ def isPlainYarnConfig(content_config: str) -> bool:
 
 
 def getExecutionConfigReason(path_project: Path, path_root: Path, tool: str) -> str | None:
-	configs = (".yarnrc.yml", ".yarnrc") if tool == "yarn" else (
+	configs = (".yarnrc.yml", ".yarnrc", ".env.yarn") if tool == "yarn" else (
 		".cargo/config.toml", ".cargo/config", "rust-toolchain.toml", "rust-toolchain")
+	try:
+		path_home = Path.home().resolve()
+	except (OSError, RuntimeError):
+		path_home = Path.home()
 	for path_directory in (path_project, *path_project.parents):
-		if path_directory != path_root and path_root not in path_directory.parents:
-			break
+		if path_directory == path_home:
+			continue
 		for name_config in configs:
 			path_config = path_directory / name_config
-			name_relative = path_config.relative_to(path_root).as_posix()
+			name_relative = (path_config.relative_to(path_root).as_posix()
+				if path_config.is_relative_to(path_root) else path_config.as_posix())
 			if path_config.parent.is_symlink() or path_config.is_symlink():
 				return (f"repository {name_relative} is symlinked; "
 					f"running {tool} could execute repository code")
 			if not path_config.exists():
 				continue
+			if name_config == ".env.yarn":
+				return f"repository {name_relative} is present; running yarn could execute repository code"
 			try:
 				content_config = path_config.read_text(encoding="utf-8-sig")
 			except (OSError, UnicodeError):
@@ -72,7 +80,7 @@ def getExecutionConfigReason(path_project: Path, path_root: Path, tool: str) -> 
 				reason_config = "contains yarn-path, yarnPath or a backslash that could conceal them"
 			else:
 				is_unsafe = not isPlainYarnConfig(content_config)
-				reason_config = "is not plain YAML; cannot rule out yarnPath/plugins"
+				reason_config = "is not plain YAML; cannot rule out yarnPath/plugins/environment injection"
 			if is_unsafe:
 				return (f"repository {name_relative} {reason_config}; "
 					f"running {tool} could execute repository code")

@@ -16,7 +16,7 @@ from scripts.validate_report import loadSchema, validateDocument
 PATH_REPO = Path(__file__).parents[1]
 
 
-class RepositoryConfigPlanTest(ScanPlanTestBase):
+class RepositoryConfigHelpers:
 	def project(self, kind, path="."):
 		return next(item for item in buildScanPlan(self.path_root)["projects"]
 			if item["kind"] == kind and item["path"] == path)
@@ -36,6 +36,8 @@ class RepositoryConfigPlanTest(ScanPlanTestBase):
 		self.assertIn(key, project["reason"])
 		self.assertIn("repository", project["reason"])
 
+
+class RepositoryConfigPlanTest(RepositoryConfigHelpers, ScanPlanTestBase):
 	def testYarnExecutionKeysAtEachAncestor(self):
 		self.writeYarn("apps/web")
 		for directory in (".", "apps", "apps/web"):
@@ -199,18 +201,13 @@ class RepositoryConfigPlanTest(ScanPlanTestBase):
 						self.assertEqual("ready", self.project("rust", "apps/rust")["status"])
 						(self.path_root / directory / config).unlink()
 
-	def testAncestorWalkStopsAtScanRoot(self):
-		self.writeFile(".yarnrc.yml", "yarnPath: evil.cjs\n")
-		self.writeFile(".yarnrc", 'yarn-path "evil.js"\n')
-		self.writeFile(".cargo/config.toml", '[alias]\naudit = "run"\n')
-		self.writeFile(".cargo/config", 'alias.audit = "run"\n')
-		self.writeFile("rust-toolchain.toml", '[toolchain]\npath = "/outside"\n')
-		self.writeFile("rust-toolchain", '/outside\n')
-		self.writeYarn("scan/apps/web")
-		self.writeCargo("scan/apps/rust")
+	def testSuppressionDetectionDoesNotExtendAboveScanRoot(self):
+		self.writeYarn("scan")
+		for name_config in (".gitleaksignore", ".gitleaks.toml", ".trivyignore", "trivy.yaml"):
+			self.writeFile(name_config)
 		plan = buildScanPlan(self.path_root / "scan")
-		self.assertEqual(["ready", "ready"], [item["status"] for item in plan["projects"]
-			if item["kind"] in ("node", "rust")])
+		for project in plan["projects"]:
+			self.assertNotIn("repository suppression config", project.get("note", ""))
 
 	def testOsvLicenseCommandIsNotBlockedByCargoAlias(self):
 		self.writeCargo()
@@ -342,7 +339,7 @@ class RepositoryConfigRunTest(unittest.TestCase):
 			["npm", "--version"]):
 			with self.subTest(command=command):
 				self.assertEqual("version 1", getToolVersion(command))
-				self.assertEqual(tempfile.gettempdir(), run_mock.call_args.kwargs.get("cwd"))
+				self.assertEqual(Path.home(), run_mock.call_args.kwargs.get("cwd"))
 
 	def runFixture(self, root, plan, semgrep=False, missing=False):
 		path_plan, path_out = root / "plan.json", root / "evidence"

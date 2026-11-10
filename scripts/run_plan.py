@@ -7,7 +7,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -55,7 +54,7 @@ def getToolVersion(command_version: list[str]) -> str | None:
 	try:
 		result_version = subprocess.run(
 			command_version,
-			cwd=tempfile.gettempdir(),
+			cwd=Path.home(),
 			capture_output=True,
 			text=True,
 			timeout=30,

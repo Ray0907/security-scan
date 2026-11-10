@@ -7,6 +7,17 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed in Unreleased
+
+- Execution-config checks for Yarn, Cargo, and rustup cover every ancestor up to the filesystem
+  root, not only up to the scan root, skipping the user's home directory. Yarn and Cargo read
+  config from those directories, so a shared parent such as `/tmp` could inject one.
+- Yarn records are `inconclusive` when `.env.yarn` exists or `.yarnrc.yml` mentions
+  `injectEnvironmentFiles` or `.env`, because injected variables such as `NODE_OPTIONS` can run
+  repository code.
+- Tool version probes run in the home directory instead of the system temporary directory, which
+  is shared between users on Linux.
+
 ## [1.11.0] - 2026-11-11
 
 ### Added in 1.11.0

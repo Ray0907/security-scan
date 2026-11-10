@@ -300,6 +300,7 @@ security-scan/
 │   ├── test_normalize_report.py
 │   ├── test_redaction_json.py
 │   ├── test_repository_config.py
+│   ├── test_repository_config_scope.py
 │   ├── test_run_plan.py
 │   ├── test_sarif_osv_location.py
 │   ├── test_scan_plan.py
